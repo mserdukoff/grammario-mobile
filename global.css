@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-background: #FAFAF8;
+  --color-foreground: #2A2926;
+  --color-card: #FDFDFC;
+  --color-card-foreground: #2A2926;
+  --color-primary: #5B38B4;
+  --color-primary-foreground: #F7F5FF;
+  --color-secondary: #EDEDEA;
+  --color-secondary-foreground: #3A3935;
+  --color-muted: #F0F0ED;
+  --color-muted-foreground: #6E6D68;
+  --color-accent: #EDEDEA;
+  --color-accent-foreground: #3A3935;
+  --color-destructive: #C44C3A;
+  --color-border: #E3E2DE;
+  --color-input: #E3E2DE;
+  --color-ring: #5B38B4;
+  --color-surface1: #F5F5F2;
+  --color-surface2: #F0F0EC;
+  --color-surface3: #E8E8E3;
+  --color-success: #2F8F5E;
+  --color-success-light: #E8F5EE;
+  --color-warning: #C9A227;
+  --color-warning-light: #F5F0E0;
+  --color-error: #C44C3A;
+  --color-error-light: #FCEAE8;
+}
+
+.dark {
+  --color-background: #1E1D1B;
+  --color-foreground: #EDECE9;
+  --color-card: #272624;
+  --color-card-foreground: #EDECE9;
+  --color-primary: #9B7FD4;
+  --color-primary-foreground: #1E1D1B;
+  --color-secondary: #302F2D;
+  --color-secondary-foreground: #EDECE9;
+  --color-muted: #302F2D;
+  --color-muted-foreground: #8A8985;
+  --color-accent: #302F2D;
+  --color-accent-foreground: #EDECE9;
+  --color-destructive: #D46050;
+  --color-border: #383735;
+  --color-input: #383735;
+  --color-ring: #9B7FD4;
+  --color-surface1: #242321;
+  --color-surface2: #2B2A28;
+  --color-surface3: #343331;
+  --color-success: #4DB87A;
+  --color-success-light: #1E2E24;
+  --color-warning: #D4B84A;
+  --color-warning-light: #2E2A1E;
+  --color-error: #D46050;
+  --color-error-light: #2E1E1E;
+}
