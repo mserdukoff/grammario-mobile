@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -17,7 +17,7 @@ import BottomSheet from "@gorhom/bottom-sheet";
 import { useTheme } from "@/theme";
 import { useAuth } from "@/lib/auth-context";
 import { useAppStore } from "@/store/useAppStore";
-import { analyzeText, type AnalysisResponse } from "@/lib/api";
+import { analyzeText, ApiError, type AnalysisResponse } from "@/lib/api";
 import {
   saveAnalysis,
   incrementTotalAnalyses,
@@ -25,6 +25,9 @@ import {
   incrementDailyGoalProgress,
   checkRateLimit,
   XP_REWARDS,
+  setDailyGoal,
+  getAnalysisCountSinceStartOfLocalDay,
+  syncAchievementsForUser,
 } from "@/lib/db";
 import { PillToggle } from "@/components/ui/PillToggle";
 import { Button } from "@/components/ui/Button";
@@ -32,8 +35,10 @@ import { DependencyGraph } from "@/components/analysis/DependencyGraph";
 import { MorphologyPanel } from "@/components/analysis/MorphologyPanel";
 import { AnalysisSheet } from "@/components/analysis/AnalysisSheet";
 import { HistorySheet } from "@/components/history/HistorySheet";
+import { SaveVocabularyRow } from "@/components/vocabulary/SaveVocabularyRow";
 import { useToast } from "@/components/gamification/AchievementToast";
 import { LANGUAGES } from "@/lib/utils";
+import { impact } from "@/lib/haptics";
 
 const LANGUAGE_OPTIONS = LANGUAGES.map((l) => ({
   label: l.code.toUpperCase(),
@@ -42,11 +47,20 @@ const LANGUAGE_OPTIONS = LANGUAGES.map((l) => ({
 
 export default function AnalyzeScreen() {
   const { colors } = useTheme();
-  const { user } = useAuth();
-  const { showXPToast, showLevelUpToast } = useToast();
+  const { user, profile, refreshProfile } = useAuth();
+  const {
+    showXPToast,
+    showLevelUpToast,
+    showDailyGoalCompleteToast,
+    showAchievementToast,
+  } = useToast();
   const setCurrentAnalysis = useAppStore((s) => s.setCurrentAnalysis);
   const addRecentAnalysis = useAppStore((s) => s.addRecentAnalysis);
-  const defaultLanguage = useAppStore((s) => s.preferences.defaultLanguage);
+  const preferences = useAppStore((s) => s.preferences);
+  const defaultLanguage = preferences.defaultLanguage;
+  const enableSounds = preferences.enableSounds;
+  const enableTTS = preferences.enableTTS;
+  const showTranslations = preferences.showTranslations;
 
   const [text, setText] = useState("");
   const [language, setLanguage] = useState(defaultLanguage);
@@ -58,11 +72,40 @@ export default function AnalyzeScreen() {
 
   const analysisSheetRef = useRef<BottomSheet>(null);
 
+  useEffect(() => {
+    if (!user) return;
+    setDailyGoal(user.id, preferences.dailyGoalTarget).catch(() => {});
+  }, [user?.id, preferences.dailyGoalTarget, user]);
+
+  useEffect(() => {
+    if (profile?.is_pro) {
+      setLanguage(defaultLanguage);
+      return;
+    }
+    const learn = profile?.learn_language;
+    if (learn) setLanguage(learn);
+  }, [profile?.is_pro, profile?.learn_language, defaultLanguage]);
+
+  const languageOptions = React.useMemo(() => {
+    if (profile?.is_pro) return LANGUAGE_OPTIONS;
+    const learn = profile?.learn_language;
+    if (!learn) return LANGUAGE_OPTIONS;
+    return LANGUAGE_OPTIONS.filter((o) => o.value === learn);
+  }, [profile?.is_pro, profile?.learn_language]);
+
   const handleSpeak = () => {
+    if (!enableTTS) return;
     const speakText = analysis?.metadata.text || text;
     if (!speakText) return;
+    const localeMap: Record<string, string> = {
+      it: "it-IT",
+      es: "es-ES",
+      de: "de-DE",
+      ru: "ru-RU",
+      tr: "tr-TR",
+    };
     Speech.speak(speakText, {
-      language: language === "it" ? "it-IT" : language === "es" ? "es-ES" : language === "de" ? "de-DE" : language === "ru" ? "ru-RU" : "tr-TR",
+      language: localeMap[language] || "en-US",
     });
   };
 
@@ -73,7 +116,7 @@ export default function AnalyzeScreen() {
       return;
     }
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    impact(enableSounds, Haptics.ImpactFeedbackStyle.Medium);
     Keyboard.dismiss();
     setLoading(true);
     setAnalysis(null);
@@ -89,6 +132,9 @@ export default function AnalyzeScreen() {
         return;
       }
 
+      const analysesTodayBefore =
+        await getAnalysisCountSinceStartOfLocalDay(user.id);
+
       const result = await analyzeText(text.trim(), language);
       setAnalysis(result);
       setCurrentAnalysis(result);
@@ -97,22 +143,76 @@ export default function AnalyzeScreen() {
       const savedId = await saveAnalysis(user.id, result);
       setAnalysisId(savedId);
       await incrementTotalAnalyses(user.id);
-      const xpResult = await addXP(user.id, XP_REWARDS.ANALYSIS);
-      showXPToast(XP_REWARDS.ANALYSIS);
+
+      let xpGain = XP_REWARDS.ANALYSIS;
+      if (analysesTodayBefore === 0) {
+        xpGain += XP_REWARDS.FIRST_ANALYSIS_OF_DAY;
+      }
+      if ((profile?.streak ?? 0) >= 2) {
+        xpGain += XP_REWARDS.STREAK_BONUS;
+      }
+
+      const xpResult = await addXP(user.id, xpGain);
+      showXPToast(xpGain);
       if (xpResult.leveledUp) {
         showLevelUpToast(xpResult.newLevel);
       }
-      await incrementDailyGoalProgress(user.id);
+
+      const { reachedGoal } = await incrementDailyGoalProgress(user.id);
+      if (reachedGoal) {
+        const goalXp = await addXP(user.id, XP_REWARDS.COMPLETE_DAILY_GOAL);
+        showDailyGoalCompleteToast();
+        if (goalXp.leveledUp) {
+          showLevelUpToast(goalXp.newLevel);
+        }
+      }
+
+      const { newlyUnlocked, leveledUpTo } =
+        await syncAchievementsForUser(user.id);
+      for (const a of newlyUnlocked) {
+        showAchievementToast(a.name);
+      }
+      if (newlyUnlocked.length > 0 && leveledUpTo) {
+        showLevelUpToast(leveledUpTo);
+      }
+
+      await refreshProfile();
 
       setTimeout(() => {
         analysisSheetRef.current?.snapToIndex(1);
       }, 300);
-    } catch (error: any) {
-      Alert.alert("Analysis Failed", error.message || "Please try again.");
+    } catch (error: unknown) {
+      if (error instanceof ApiError) {
+        if (error.statusCode === 429) {
+          Alert.alert("Daily limit", error.message);
+          return;
+        }
+        if (error.statusCode === 403) {
+          Alert.alert("Not allowed", error.message);
+          return;
+        }
+      }
+      Alert.alert(
+        "Analysis Failed",
+        error instanceof Error ? error.message : "Please try again."
+      );
     } finally {
       setLoading(false);
     }
-  }, [text, language, user, setCurrentAnalysis, addRecentAnalysis, showXPToast, showLevelUpToast]);
+  }, [
+    text,
+    language,
+    user,
+    profile?.streak,
+    setCurrentAnalysis,
+    addRecentAnalysis,
+    showXPToast,
+    showLevelUpToast,
+    showDailyGoalCompleteToast,
+    showAchievementToast,
+    refreshProfile,
+    enableSounds,
+  ]);
 
   const handleLoadAnalysis = (loaded: AnalysisResponse) => {
     setAnalysis(loaded);
@@ -120,6 +220,7 @@ export default function AnalyzeScreen() {
     setText(loaded.metadata.text);
     setLanguage(loaded.metadata.language);
     setSelectedTokenId(null);
+    setAnalysisId(null);
     setHistoryVisible(false);
     setTimeout(() => {
       analysisSheetRef.current?.snapToIndex(1);
@@ -131,7 +232,6 @@ export default function AnalyzeScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{ flex: 1 }}>
-        {/* Input Section */}
         <View
           style={{
             backgroundColor: colors.card,
@@ -141,11 +241,34 @@ export default function AnalyzeScreen() {
             gap: 12,
           }}
         >
-          <PillToggle
-            options={LANGUAGE_OPTIONS}
-            selected={language}
-            onSelect={setLanguage}
-          />
+          {languageOptions.length <= 1 ? (
+            <View style={{ gap: 4 }}>
+              <Text
+                style={{
+                  fontFamily: "PlusJakartaSans-Medium",
+                  fontSize: 12,
+                  color: colors.mutedForeground,
+                }}
+              >
+                Learning language (free tier)
+              </Text>
+              <Text
+                style={{
+                  fontFamily: "PlusJakartaSans-SemiBold",
+                  fontSize: 15,
+                  color: colors.foreground,
+                }}
+              >
+                {LANGUAGES.find((l) => l.code === language)?.name ?? language}
+              </Text>
+            </View>
+          ) : (
+            <PillToggle
+              options={languageOptions}
+              selected={language}
+              onSelect={setLanguage}
+            />
+          )}
 
           <View
             style={{
@@ -179,7 +302,11 @@ export default function AnalyzeScreen() {
               hitSlop={8}
               accessibilityLabel="Listen to pronunciation"
               accessibilityRole="button"
-              style={{ padding: 8 }}
+              style={{
+                padding: 8,
+                opacity: enableTTS ? 1 : 0.35,
+              }}
+              disabled={!enableTTS}
             >
               <Volume2 size={20} color={colors.mutedForeground} />
             </Pressable>
@@ -223,7 +350,6 @@ export default function AnalyzeScreen() {
           />
         </View>
 
-        {/* Graph + Morphology */}
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: 200 }}
@@ -236,11 +362,24 @@ export default function AnalyzeScreen() {
                 selectedTokenId={selectedTokenId}
                 onSelectToken={setSelectedTokenId}
               />
-              {selectedToken && (
-                <MorphologyPanel
-                  token={selectedToken}
-                  language={analysis.metadata.language}
-                />
+              {selectedToken && user && (
+                <>
+                  <SaveVocabularyRow
+                    userId={user.id}
+                    analysisId={analysisId}
+                    token={selectedToken}
+                    sentence={analysis.metadata.text}
+                    language={analysis.metadata.language}
+                    sentenceTranslation={
+                      analysis.pedagogical_data?.translation
+                    }
+                    onSaved={() => refreshProfile()}
+                  />
+                  <MorphologyPanel
+                    token={selectedToken}
+                    language={analysis.metadata.language}
+                  />
+                </>
               )}
             </>
           )}
@@ -269,16 +408,15 @@ export default function AnalyzeScreen() {
           )}
         </ScrollView>
 
-        {/* Analysis Bottom Sheet */}
         {analysis && (
           <AnalysisSheet
             ref={analysisSheetRef}
             analysis={analysis}
             analysisId={analysisId}
+            showTranslations={showTranslations}
           />
         )}
 
-        {/* History Bottom Sheet */}
         <HistorySheet
           visible={historyVisible}
           onDismiss={() => setHistoryVisible(false)}

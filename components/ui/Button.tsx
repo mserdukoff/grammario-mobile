@@ -10,7 +10,12 @@ import { useTheme } from "@/theme";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-type ButtonVariant = "primary" | "outline" | "ghost" | "destructive";
+type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "outline"
+  | "ghost"
+  | "destructive";
 
 interface ButtonProps {
   title: string;
@@ -56,6 +61,10 @@ export function Button({
       backgroundColor: colors.primary,
       borderWidth: 0,
     },
+    secondary: {
+      backgroundColor: colors.secondary,
+      borderWidth: 0,
+    },
     outline: {
       backgroundColor: "transparent",
       borderWidth: 1,
@@ -73,6 +82,7 @@ export function Button({
 
   const textStyles: Record<ButtonVariant, TextStyle> = {
     primary: { color: colors.primaryForeground },
+    secondary: { color: colors.secondaryForeground },
     outline: { color: colors.foreground },
     ghost: { color: colors.foreground },
     destructive: { color: "#FFFFFF" },

@@ -1,18 +1,31 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text } from "react-native";
-import { TrendingUp, Flame, Target } from "lucide-react-native";
+import { TrendingUp, Flame, Target, ListChecks } from "lucide-react-native";
 import { useTheme } from "@/theme";
 import { useAuth, xpProgress, xpForNextLevel } from "@/lib/auth-context";
 import { ProgressBar } from "@/components/ui/ProgressBar";
+import { getDailyGoal } from "@/lib/db";
+import type { DailyGoal } from "@/lib/database.types";
 
 export function StatsPanel() {
   const { colors } = useTheme();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
+  const [todayGoal, setTodayGoal] = useState<DailyGoal | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    getDailyGoal(user.id).then(setTodayGoal).catch(() => setTodayGoal(null));
+  }, [user?.id, profile?.total_analyses]);
 
   if (!profile) return null;
 
   const progress = xpProgress(profile.xp, profile.level);
   const nextLevel = xpForNextLevel(profile.level);
+
+  const goalProgress =
+    todayGoal && todayGoal.target > 0
+      ? Math.min(100, (todayGoal.completed / todayGoal.target) * 100)
+      : 0;
 
   const stats = [
     {
@@ -33,6 +46,18 @@ export function StatsPanel() {
       detail: "Total sentences analyzed",
       iconBg: colors.surface2,
     },
+    ...(todayGoal
+      ? [
+          {
+            icon: <ListChecks size={18} color={colors.primary} />,
+            label: `Daily goal ${todayGoal.completed}/${todayGoal.target}`,
+            detail: todayGoal.is_achieved
+              ? "Completed today"
+              : "Analyses toward today’s target",
+            iconBg: colors.surface2,
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -62,6 +87,12 @@ export function StatsPanel() {
           {profile.xp} / {nextLevel} XP
         </Text>
       </View>
+
+      {todayGoal && (
+        <View style={{ gap: 4, marginBottom: 12 }}>
+          <ProgressBar progress={goalProgress} fillColor={colors.success} />
+        </View>
+      )}
 
       {stats.map((stat, i) => (
         <View

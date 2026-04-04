@@ -15,22 +15,26 @@ import Animated, {
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/theme";
-import { Zap, TrendingUp } from "lucide-react-native";
+import { Zap, TrendingUp, Trophy, Target } from "lucide-react-native";
 
 interface Toast {
   id: number;
-  type: "xp" | "levelup";
+  type: "xp" | "levelup" | "achievement" | "dailygoal";
   message: string;
 }
 
 interface ToastContextType {
   showXPToast: (amount: number) => void;
   showLevelUpToast: (level: number) => void;
+  showAchievementToast: (title: string) => void;
+  showDailyGoalCompleteToast: () => void;
 }
 
 const ToastContext = createContext<ToastContextType>({
   showXPToast: () => {},
   showLevelUpToast: () => {},
+  showAchievementToast: () => {},
+  showDailyGoalCompleteToast: () => {},
 });
 
 let nextId = 0;
@@ -61,8 +65,46 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     setTimeout(() => removeToast(id), 3500);
   }, [removeToast]);
 
+  const showAchievementToast = useCallback(
+    (title: string) => {
+      const id = nextId++;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setToasts((prev) => [
+        ...prev,
+        {
+          id,
+          type: "achievement",
+          message: `Achievement: ${title}`,
+        },
+      ]);
+      setTimeout(() => removeToast(id), 4000);
+    },
+    [removeToast]
+  );
+
+  const showDailyGoalCompleteToast = useCallback(() => {
+    const id = nextId++;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setToasts((prev) => [
+      ...prev,
+      {
+        id,
+        type: "dailygoal",
+        message: "Daily goal complete! +50 XP",
+      },
+    ]);
+    setTimeout(() => removeToast(id), 3500);
+  }, [removeToast]);
+
   return (
-    <ToastContext.Provider value={{ showXPToast, showLevelUpToast }}>
+    <ToastContext.Provider
+      value={{
+        showXPToast,
+        showLevelUpToast,
+        showAchievementToast,
+        showDailyGoalCompleteToast,
+      }}
+    >
       {children}
       <View
         pointerEvents="none"
@@ -109,6 +151,9 @@ function ToastItem({ toast }: { toast: Toast }) {
   }));
 
   const isLevelUp = toast.type === "levelup";
+  const isAchievement = toast.type === "achievement";
+  const isDailyGoal = toast.type === "dailygoal";
+  const isHighlight = isLevelUp || isAchievement || isDailyGoal;
 
   return (
     <Animated.View
@@ -117,11 +162,11 @@ function ToastItem({ toast }: { toast: Toast }) {
           flexDirection: "row",
           alignItems: "center",
           gap: 10,
-          backgroundColor: isLevelUp ? colors.primary : colors.card,
+          backgroundColor: isHighlight ? colors.primary : colors.card,
           borderRadius: 10,
           paddingHorizontal: 16,
           paddingVertical: 12,
-          borderWidth: isLevelUp ? 0 : 1,
+          borderWidth: isHighlight ? 0 : 1,
           borderColor: colors.border,
           shadowColor: "#000",
           shadowOffset: { width: 0, height: 4 },
@@ -134,6 +179,10 @@ function ToastItem({ toast }: { toast: Toast }) {
     >
       {isLevelUp ? (
         <TrendingUp size={20} color={colors.primaryForeground} />
+      ) : isAchievement ? (
+        <Trophy size={20} color={colors.primaryForeground} />
+      ) : isDailyGoal ? (
+        <Target size={20} color={colors.primaryForeground} />
       ) : (
         <Zap size={18} color={colors.primary} />
       )}
@@ -141,7 +190,8 @@ function ToastItem({ toast }: { toast: Toast }) {
         style={{
           fontFamily: "PlusJakartaSans-SemiBold",
           fontSize: 15,
-          color: isLevelUp ? colors.primaryForeground : colors.primary,
+          color: isHighlight ? colors.primaryForeground : colors.primary,
+          flex: 1,
         }}
       >
         {toast.message}
