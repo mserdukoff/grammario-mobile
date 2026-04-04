@@ -48,6 +48,10 @@ function RootNavigator() {
           name="grammar-reference"
           options={{ presentation: "modal" }}
         />
+        <Stack.Screen
+          name="achievements"
+          options={{ presentation: "modal" }}
+        />
         <Stack.Screen name="+not-found" />
       </Stack>
     </>

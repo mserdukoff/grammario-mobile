@@ -124,17 +124,77 @@ export async function deleteAnalysis(analysisId: string) {
 
 // === VOCABULARY ===
 
-export async function getVocabularyDueForReview(
-  userId: string
-): Promise<Vocabulary[]> {
+export type SaveVocabularyResult =
+  | { status: "saved"; id: string }
+  | { status: "duplicate" };
+
+export async function saveVocabularyFromAnalyzer(
+  userId: string,
+  params: {
+    word: string;
+    lemma: string;
+    language: string;
+    part_of_speech: string | null;
+    context: string;
+    analysis_id?: string | null;
+    /** Sentence-level gloss from analysis (improves review cards). */
+    translation?: string | null;
+  }
+): Promise<SaveVocabularyResult> {
+  const { data: existing } = await db
+    .from("vocabulary")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("lemma", params.lemma)
+    .eq("language", params.language)
+    .maybeSingle();
+
+  if (existing) return { status: "duplicate" };
+
   const today = new Date().toISOString().split("T")[0];
 
   const { data, error } = await db
+    .from("vocabulary")
+    .insert({
+      user_id: userId,
+      word: params.word,
+      lemma: params.lemma,
+      language: params.language,
+      part_of_speech: params.part_of_speech,
+      context: params.context,
+      analysis_id: params.analysis_id ?? null,
+      translation: params.translation?.trim() || null,
+      mastery: 0,
+      ease_factor: 2.5,
+      interval_days: 0,
+      next_review: today,
+      review_count: 0,
+    })
+    .select("id")
+    .single();
+
+  if (error) throw error;
+  return { status: "saved", id: data.id };
+}
+
+export async function getVocabularyDueForReview(
+  userId: string,
+  language?: string | null
+): Promise<Vocabulary[]> {
+  const today = new Date().toISOString().split("T")[0];
+
+  let query = db
     .from("vocabulary")
     .select("*")
     .eq("user_id", userId)
     .lte("next_review", today)
     .order("next_review", { ascending: true });
+
+  if (language) {
+    query = query.eq("language", language);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return data || [];
@@ -208,6 +268,59 @@ export async function updateVocabularyReview(
     .eq("id", vocabId);
 
   if (error) throw error;
+}
+
+export async function getVocabularyReviewStats(
+  userId: string,
+  languageFilter?: string | null
+): Promise<{ total: number; due: number; mastered: number }> {
+  const today = new Date().toISOString().split("T")[0];
+
+  let totalQ = db
+    .from("vocabulary")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId);
+  let dueQ = db
+    .from("vocabulary")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .lte("next_review", today);
+  let masteredQ = db
+    .from("vocabulary")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .gte("mastery", 80);
+
+  if (languageFilter) {
+    totalQ = totalQ.eq("language", languageFilter);
+    dueQ = dueQ.eq("language", languageFilter);
+    masteredQ = masteredQ.eq("language", languageFilter);
+  }
+
+  const [{ count: total }, { count: due }, { count: mastered }] =
+    await Promise.all([totalQ, dueQ, masteredQ]);
+
+  return {
+    total: total ?? 0,
+    due: due ?? 0,
+    mastered: mastered ?? 0,
+  };
+}
+
+export async function getAnalysisCountSinceStartOfLocalDay(
+  userId: string
+): Promise<number> {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+
+  const { count, error } = await db
+    .from("analyses")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .gte("created_at", start.toISOString());
+
+  if (error) throw error;
+  return count ?? 0;
 }
 
 // === GAMIFICATION ===
@@ -307,7 +420,7 @@ export async function setDailyGoal(
 
 export async function incrementDailyGoalProgress(
   userId: string
-): Promise<DailyGoal | null> {
+): Promise<{ dailyGoal: DailyGoal | null; reachedGoal: boolean }> {
   const today = new Date().toISOString().split("T")[0];
 
   const { data: current, error: fetchError } = await db
@@ -318,8 +431,9 @@ export async function incrementDailyGoalProgress(
     .single();
 
   if (fetchError && fetchError.code !== "PGRST116") throw fetchError;
-  if (!current) return null;
+  if (!current) return { dailyGoal: null, reachedGoal: false };
 
+  const wasAchieved = current.is_achieved;
   const newCompleted = current.completed + 1;
   const isAchieved = newCompleted >= current.target;
 
@@ -334,7 +448,10 @@ export async function incrementDailyGoalProgress(
     .single();
 
   if (error) throw error;
-  return data;
+  return {
+    dailyGoal: data,
+    reachedGoal: !wasAchieved && isAchieved,
+  };
 }
 
 // === ACHIEVEMENTS ===
@@ -359,6 +476,107 @@ export async function getUserAchievements(
 
   if (error) throw error;
   return data || [];
+}
+
+function achievementRequirementMet(
+  achievement: Achievement,
+  profile: {
+    total_analyses: number;
+    streak: number;
+    level: number;
+  },
+  vocabularyTotal: number
+): boolean {
+  const t = (achievement.requirement_type || "").toLowerCase();
+  const v = achievement.requirement_value;
+  if (v == null) return false;
+
+  if (t.includes("analysis") || t === "analyses" || t === "total_analyses") {
+    return profile.total_analyses >= v;
+  }
+  if (t.includes("streak")) {
+    return profile.streak >= v;
+  }
+  if (t.includes("vocab") || t.includes("vocabulary") || t === "words") {
+    return vocabularyTotal >= v;
+  }
+  if (t.includes("level")) {
+    return profile.level >= v;
+  }
+  return false;
+}
+
+/** Evaluates definitions vs profile; inserts unlocks and awards XP per achievement. */
+export async function syncAchievementsForUser(userId: string): Promise<{
+  newlyUnlocked: Achievement[];
+  leveledUpTo: number | null;
+}> {
+  const [achievements, userAchievements, profileRow, vocabCount] =
+    await Promise.all([
+      getAchievements(),
+      getUserAchievements(userId),
+      db
+        .from("users")
+        .select("total_analyses, streak, level")
+        .eq("id", userId)
+        .single(),
+      db
+        .from("vocabulary")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId),
+    ]);
+
+  if (profileRow.error) throw profileRow.error;
+
+  const profile = profileRow.data as {
+    total_analyses: number;
+    streak: number;
+    level: number;
+  };
+  const unlockedIds = new Set(userAchievements.map((u) => u.achievement_id));
+  const vocabularyTotal = vocabCount.count ?? 0;
+  const newlyUnlocked: Achievement[] = [];
+  let leveledUpTo: number | null = null;
+
+  for (const a of achievements) {
+    if (unlockedIds.has(a.id)) continue;
+    if (!achievementRequirementMet(a, profile, vocabularyTotal)) continue;
+
+    const { error: insErr } = await db.from("user_achievements").insert({
+      user_id: userId,
+      achievement_id: a.id,
+    });
+
+    if (insErr) continue;
+
+    unlockedIds.add(a.id);
+    const xp = a.xp_reward ?? XP_REWARDS.ACHIEVEMENT_UNLOCK;
+    if (xp > 0) {
+      const xpRes = await addXP(userId, xp);
+      if (xpRes.leveledUp) {
+        leveledUpTo = xpRes.newLevel;
+        profile.level = xpRes.newLevel;
+      }
+    }
+    newlyUnlocked.push(a);
+  }
+
+  return { newlyUnlocked, leveledUpTo };
+}
+
+export async function updateUserLearnLanguage(
+  userId: string,
+  languageCode: string
+) {
+  const { error } = await db
+    .from("users")
+    .update({
+      learn_language: languageCode,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", userId);
+
+  if (error) throw error;
 }
 
 // === FEEDBACK ===

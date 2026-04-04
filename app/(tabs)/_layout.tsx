@@ -1,13 +1,22 @@
 import { Tabs } from "expo-router";
-import { House, Search, BookOpen, Settings } from "lucide-react-native";
+import {
+  House,
+  Search,
+  BookOpen,
+  Settings,
+  GraduationCap,
+} from "lucide-react-native";
 import { useTheme } from "@/theme";
-import { Platform } from "react-native";
+import { Platform, View } from "react-native";
+import { LearnLanguageGate } from "@/components/onboarding/LearnLanguageGate";
 
 export default function TabLayout() {
   const { colors } = useTheme();
 
   return (
-    <Tabs
+    <View style={{ flex: 1 }}>
+      <LearnLanguageGate />
+      <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
@@ -45,6 +54,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="learn"
+        options={{
+          title: "Learn",
+          tabBarIcon: ({ color, size }) => (
+            <GraduationCap size={size} color={color} strokeWidth={1.8} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="review"
         options={{
           title: "Review",
@@ -63,5 +81,6 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </View>
   );
 }

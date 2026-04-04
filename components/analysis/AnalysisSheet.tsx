@@ -17,6 +17,7 @@ import { FeedbackForm } from "@/components/feedback/FeedbackForm";
 interface AnalysisSheetProps {
   analysis: AnalysisResponse;
   analysisId: string | null;
+  showTranslations?: boolean;
 }
 
 function getCefrColors(level: string, colors: any) {
@@ -28,7 +29,10 @@ function getCefrColors(level: string, colors: any) {
 }
 
 export const AnalysisSheet = forwardRef<BottomSheet, AnalysisSheetProps>(
-  function AnalysisSheet({ analysis, analysisId }, ref) {
+  function AnalysisSheet(
+    { analysis, analysisId, showTranslations = true },
+    ref
+  ) {
     const { colors, isDark } = useTheme();
     const snapPoints = useMemo(() => [64, "45%", "90%"], []);
     const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -98,7 +102,7 @@ export const AnalysisSheet = forwardRef<BottomSheet, AnalysisSheetProps>(
           contentContainerStyle={{ padding: 16, gap: 20, paddingBottom: 40 }}
         >
           {/* Translation */}
-          {pd?.translation && (
+          {showTranslations && pd?.translation && (
             <Section label="Translation" colors={colors}>
               <Text
                 style={{

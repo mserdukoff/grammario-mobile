@@ -85,6 +85,7 @@ function makeFallbackProfile(authUser: SupabaseUser): User {
     longest_streak: 0,
     last_active_date: null,
     total_analyses: 0,
+    learn_language: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -160,6 +161,7 @@ async function createOrUpdateUserProfile(
           longest_streak: 1,
           last_active_date: today,
           total_analyses: 0,
+          learn_language: null,
         })
         .select()
         .maybeSingle();

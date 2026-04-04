@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, ScrollView, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Search, BookOpen, ArrowRight } from "lucide-react-native";
+import { Search, BookOpen, ArrowRight, GraduationCap } from "lucide-react-native";
 import { useTheme } from "@/theme";
 import { useAuth } from "@/lib/auth-context";
 import { Card } from "@/components/ui/Card";
@@ -111,6 +111,73 @@ export default function HomeScreen() {
                   Start
                 </Text>
                 <ArrowRight size={16} color={colors.primaryForeground} />
+              </View>
+            </Pressable>
+          </Card>
+
+          <Card>
+            <Pressable
+              onPress={() => router.push("/learn")}
+              style={{ gap: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel="Guided learning"
+            >
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 10,
+                  backgroundColor: colors.primary + "15",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <GraduationCap size={20} color={colors.primary} />
+              </View>
+              <View>
+                <Text
+                  style={{
+                    fontFamily: "PlusJakartaSans-SemiBold",
+                    fontSize: 16,
+                    color: colors.foreground,
+                  }}
+                >
+                  Guided learning
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: "PlusJakartaSans",
+                    fontSize: 13,
+                    color: colors.mutedForeground,
+                    marginTop: 2,
+                  }}
+                >
+                  Browse CEFR levels and outline grammar topics by language
+                </Text>
+              </View>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                  alignSelf: "flex-start",
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                  borderRadius: 8,
+                  marginTop: 4,
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: "PlusJakartaSans-SemiBold",
+                    fontSize: 14,
+                    color: colors.foreground,
+                  }}
+                >
+                  Open Learn
+                </Text>
               </View>
             </Pressable>
           </Card>

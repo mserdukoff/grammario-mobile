@@ -30,6 +30,7 @@ export interface Database {
           longest_streak: number;
           last_active_date: string | null;
           total_analyses: number;
+          learn_language: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -39,6 +40,7 @@ export interface Database {
           display_name?: string | null;
           avatar_url?: string | null;
           is_pro?: boolean;
+          learn_language?: string | null;
           xp?: number;
           level?: number;
           streak?: number;
@@ -52,6 +54,7 @@ export interface Database {
           display_name?: string | null;
           avatar_url?: string | null;
           is_pro?: boolean;
+          learn_language?: string | null;
           xp?: number;
           level?: number;
           streak?: number;

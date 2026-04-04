@@ -7,22 +7,30 @@ import {
   Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Eye, X, Check, CheckCheck, RotateCcw } from "lucide-react-native";
+import { Eye, X, Check, CheckCheck, RotateCcw, ChevronDown } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme";
 import { useAuth } from "@/lib/auth-context";
-import { getVocabularyDueForReview, updateVocabularyReview } from "@/lib/db";
+import {
+  getVocabularyDueForReview,
+  updateVocabularyReview,
+  getVocabularyReviewStats,
+} from "@/lib/db";
 import type { Vocabulary } from "@/lib/database.types";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { getLanguageName } from "@/lib/utils";
+import { useAppStore } from "@/store/useAppStore";
+import { impact } from "@/lib/haptics";
+import { Badge } from "@/components/ui/Badge";
 
 export default function ReviewScreen() {
   const { colors } = useTheme();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const router = useRouter();
+  const soundsEnabled = useAppStore((s) => s.preferences.enableSounds);
 
   const [words, setWords] = useState<Vocabulary[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -30,30 +38,46 @@ export default function ReviewScreen() {
   const [loading, setLoading] = useState(true);
   const [sessionComplete, setSessionComplete] = useState(false);
   const [results, setResults] = useState({ correct: 0, total: 0 });
+  const [stats, setStats] = useState({
+    total: 0,
+    due: 0,
+    mastered: 0,
+  });
+  const [showFineScale, setShowFineScale] = useState(false);
+
+  const langScope =
+    profile && !profile.is_pro && profile.learn_language
+      ? profile.learn_language
+      : null;
 
   const loadWords = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
-      const due = await getVocabularyDueForReview(user.id);
-      setWords(due);
+      const [due, s] = await Promise.all([
+        getVocabularyDueForReview(user.id, langScope ?? undefined),
+        getVocabularyReviewStats(user.id, langScope),
+      ]);
+      setWords(due.slice(0, 20));
+      setStats(s);
       setCurrentIndex(0);
       setRevealed(false);
       setSessionComplete(false);
       setResults({ correct: 0, total: 0 });
+      setShowFineScale(false);
     } catch {
       // silent
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, langScope]);
 
   useEffect(() => {
     loadWords();
   }, [loadWords]);
 
   const handleReveal = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    impact(soundsEnabled, Haptics.ImpactFeedbackStyle.Light);
     setRevealed(true);
   };
 
@@ -61,7 +85,7 @@ export default function ReviewScreen() {
     const word = words[currentIndex];
     if (!word) return;
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    impact(soundsEnabled, Haptics.ImpactFeedbackStyle.Light);
 
     try {
       await updateVocabularyReview(word.id, quality);
@@ -81,6 +105,7 @@ export default function ReviewScreen() {
     } else {
       setCurrentIndex((prev) => prev + 1);
       setRevealed(false);
+      setShowFineScale(false);
     }
   };
 
@@ -112,7 +137,6 @@ export default function ReviewScreen() {
           gap: 20,
         }}
       >
-        {/* Header */}
         <View style={{ gap: 8 }}>
           <Text
             style={{
@@ -123,7 +147,7 @@ export default function ReviewScreen() {
           >
             Vocabulary Review
           </Text>
-          <View style={{ flexDirection: "row", gap: 12 }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
             <Text
               style={{
                 fontFamily: "PlusJakartaSans",
@@ -131,7 +155,7 @@ export default function ReviewScreen() {
                 color: colors.mutedForeground,
               }}
             >
-              {words.length} words
+              {stats.total} words
             </Text>
             <Text
               style={{
@@ -140,12 +164,48 @@ export default function ReviewScreen() {
                 color: colors.warning,
               }}
             >
-              {words.length} due
+              {stats.due} due
+            </Text>
+            <Text
+              style={{
+                fontFamily: "PlusJakartaSans-Medium",
+                fontSize: 13,
+                color: colors.success,
+              }}
+            >
+              {stats.mastered} mastered (80%+)
             </Text>
           </View>
         </View>
 
-        {words.length === 0 ? (
+        {profile && !profile.is_pro && !profile.learn_language ? (
+          <View
+            style={{
+              flex: 1,
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              paddingTop: 80,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: "PlusJakartaSans",
+                fontSize: 15,
+                color: colors.mutedForeground,
+                textAlign: "center",
+              }}
+            >
+              Choose a learning language to load vocabulary scoped to your free
+              plan.
+            </Text>
+            <Button
+              title="Open Settings"
+              onPress={() => router.push("/(tabs)/settings")}
+              variant="outline"
+            />
+          </View>
+        ) : words.length === 0 ? (
           <View
             style={{
               flex: 1,
@@ -185,7 +245,6 @@ export default function ReviewScreen() {
             />
           </View>
         ) : sessionComplete ? (
-          /* Session Complete */
           <View
             style={{
               flex: 1,
@@ -251,7 +310,6 @@ export default function ReviewScreen() {
             </View>
           </View>
         ) : currentWord ? (
-          /* Flashcard */
           <>
             <View style={{ gap: 4 }}>
               <ProgressBar progress={progress} />
@@ -275,12 +333,13 @@ export default function ReviewScreen() {
                 gap: 16,
               }}
             >
-              {/* Metadata */}
               <View
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
                   gap: 8,
+                  flexWrap: "wrap",
+                  justifyContent: "center",
                 }}
               >
                 <Text
@@ -302,9 +361,11 @@ export default function ReviewScreen() {
                 >
                   · {currentWord.mastery}% mastered
                 </Text>
+                {currentWord.part_of_speech && (
+                  <Badge label={currentWord.part_of_speech} mono />
+                )}
               </View>
 
-              {/* Word */}
               <Text
                 style={{
                   fontFamily: "InstrumentSerif-Italic",
@@ -327,7 +388,6 @@ export default function ReviewScreen() {
                 {currentWord.lemma}
               </Text>
 
-              {/* Context */}
               {currentWord.context && (
                 <View
                   style={{
@@ -362,7 +422,6 @@ export default function ReviewScreen() {
                 </View>
               )}
 
-              {/* Reveal / Rating */}
               {!revealed ? (
                 <Button
                   title="Show answer"
@@ -400,7 +459,7 @@ export default function ReviewScreen() {
                       color: colors.mutedForeground,
                     }}
                   >
-                    How well did you know this?
+                    How well did you know this? (SM-2 quality)
                   </Text>
 
                   <View
@@ -432,7 +491,7 @@ export default function ReviewScreen() {
                           color: colors.error,
                         }}
                       >
-                        Wrong
+                        Wrong (1)
                       </Text>
                     </Pressable>
 
@@ -458,12 +517,12 @@ export default function ReviewScreen() {
                           color: colors.warning,
                         }}
                       >
-                        Hard
+                        Hard (3)
                       </Text>
                     </Pressable>
 
                     <Pressable
-                      onPress={() => handleRate(5)}
+                      onPress={() => handleRate(4)}
                       style={{
                         flex: 1,
                         alignItems: "center",
@@ -484,10 +543,73 @@ export default function ReviewScreen() {
                           color: colors.success,
                         }}
                       >
-                        Good
+                        Good (4)
                       </Text>
                     </Pressable>
                   </View>
+
+                  <Pressable
+                    onPress={() => setShowFineScale((v) => !v)}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                      paddingVertical: 8,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: "PlusJakartaSans-Medium",
+                        fontSize: 13,
+                        color: colors.primary,
+                      }}
+                    >
+                      More ratings (0–5)
+                    </Text>
+                    <ChevronDown
+                      size={16}
+                      color={colors.primary}
+                      style={{
+                        transform: [{ rotate: showFineScale ? "180deg" : "0deg" }],
+                      }}
+                    />
+                  </Pressable>
+
+                  {showFineScale && (
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        flexWrap: "wrap",
+                        gap: 8,
+                        justifyContent: "center",
+                      }}
+                    >
+                      {[0, 2, 5].map((q) => (
+                        <Pressable
+                          key={q}
+                          onPress={() => handleRate(q)}
+                          style={{
+                            paddingHorizontal: 14,
+                            paddingVertical: 10,
+                            borderRadius: 8,
+                            borderWidth: 1,
+                            borderColor: colors.border,
+                            backgroundColor: colors.surface2,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontFamily: "PlusJakartaSans-Medium",
+                              fontSize: 13,
+                              color: colors.foreground,
+                            }}
+                          >
+                            {q}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  )}
                 </View>
               )}
             </Card>
