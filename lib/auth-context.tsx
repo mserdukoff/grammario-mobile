@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
+import { isInvalidStoredSessionError } from "./auth-session";
 import { supabase } from "./supabase";
 import type { User as SupabaseUser, Session } from "@supabase/supabase-js";
 import type { User } from "./database.types";
@@ -228,10 +229,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const {
           data: { session },
+          error,
         } = await supabase.auth.getSession();
 
         if (!mounted) return;
         clearTimeout(safetyTimeout);
+
+        if (error) {
+          if (isInvalidStoredSessionError(error)) {
+            await supabase.auth.signOut({ scope: "local" });
+          }
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
 
         if (session) {
           setSession(session);

@@ -1,4 +1,5 @@
 import axios, { AxiosError } from "axios";
+import { isInvalidStoredSessionError } from "./auth-session";
 import { supabase } from "./supabase";
 
 export interface AnalysisResponse {
@@ -111,7 +112,11 @@ const api = axios.create({
 api.interceptors.request.use(async (config) => {
   const {
     data: { session },
+    error,
   } = await supabase.auth.getSession();
+  if (error && isInvalidStoredSessionError(error)) {
+    await supabase.auth.signOut({ scope: "local" });
+  }
   if (session?.access_token) {
     config.headers.Authorization = `Bearer ${session.access_token}`;
   }

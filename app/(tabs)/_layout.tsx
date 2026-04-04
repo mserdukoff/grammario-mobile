@@ -5,13 +5,18 @@ import {
   BookOpen,
   Settings,
   GraduationCap,
+  LayoutDashboard,
 } from "lucide-react-native";
 import { useTheme } from "@/theme";
 import { Platform, View } from "react-native";
 import { LearnLanguageGate } from "@/components/onboarding/LearnLanguageGate";
+import { useAuth } from "@/lib/auth-context";
+import { isAdminUser } from "@/lib/admin";
 
 export default function TabLayout() {
   const { colors } = useTheme();
+  const { user } = useAuth();
+  const showAdminTab = isAdminUser(user?.id);
 
   return (
     <View style={{ flex: 1 }}>
@@ -68,6 +73,16 @@ export default function TabLayout() {
           title: "Review",
           tabBarIcon: ({ color, size }) => (
             <BookOpen size={size} color={color} strokeWidth={1.8} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="admin"
+        options={{
+          title: "Admin",
+          href: showAdminTab ? undefined : null,
+          tabBarIcon: ({ color, size }) => (
+            <LayoutDashboard size={size} color={color} strokeWidth={1.8} />
           ),
         }}
       />

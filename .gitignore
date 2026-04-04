@@ -3,8 +3,9 @@
 # dependencies
 node_modules/
 
-# Expo
+# Expo / EAS
 .expo/
+credentials.json
 dist/
 web-build/
 expo-env.d.ts
