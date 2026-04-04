@@ -38,7 +38,7 @@ const DAILY_GOAL_OPTIONS = DAILY_GOAL_PRESETS.map((n) => ({
 const LEARN_LANG_CHANGE_AT_KEY = "grammario-last-learn-language-change-at";
 
 const WEB_ORIGIN =
-  process.env.EXPO_PUBLIC_WEB_ORIGIN || "https://grammario.com";
+  process.env.EXPO_PUBLIC_WEB_ORIGIN || "https://grammario.ai";
 
 export default function SettingsScreen() {
   const { colors, mode, setMode } = useTheme();

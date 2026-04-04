@@ -139,7 +139,15 @@ export default function AdminOverviewScreen() {
 
         {error ? (
           <Card>
-            <Text style={{ fontFamily: "PlusJakartaSans", color: colors.destructive }}>
+            <Text
+              selectable
+              style={{
+                fontFamily: "PlusJakartaSans",
+                fontSize: 13,
+                lineHeight: 20,
+                color: colors.destructive,
+              }}
+            >
               {error}
             </Text>
           </Card>

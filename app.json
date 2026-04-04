@@ -14,9 +14,15 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.grammario.mobile"
+      "bundleIdentifier": "com.grammario.mobile",
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        }
+      }
     },
     "android": {
+      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#FAFAF8",
         "foregroundImage": "./assets/android-icon-foreground.png",

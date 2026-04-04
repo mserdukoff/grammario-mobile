@@ -1,26 +1,51 @@
 import axios, { AxiosError } from "axios";
+import { applyTrustedClientHeaders, resolveApiClientOrigin } from "./api-client-origin";
 import { isInvalidStoredSessionError } from "./auth-session";
 import { ApiError } from "./api";
 import { supabase } from "./supabase";
 
-const WEB_ORIGIN = (
-  process.env.EXPO_PUBLIC_WEB_ORIGIN || "https://grammario.com"
-).replace(/\/$/, "");
+function trimSlash(s: string): string {
+  return s.replace(/\/+$/, "");
+}
 
-/** Next.js BFF admin routes; override if admin API is hosted elsewhere. */
-export const ADMIN_API_BASE = (
-  process.env.EXPO_PUBLIC_ADMIN_API_URL || `${WEB_ORIGIN}/api/v1`
-).replace(/\/$/, "");
+/**
+ * Resolution order (same `/api/v1/admin/*` paths as the web admin BFF):
+ * 1. EXPO_PUBLIC_ADMIN_API_URL — explicit admin host
+ * 2. EXPO_PUBLIC_API_URL + /api/v1 — same base as analyze/usage (`lib/api.ts`)
+ * 3. EXPO_PUBLIC_WEB_ORIGIN + /api/v1 — fallback (e.g. legal links host)
+ */
+export function resolveAdminApiBase(): string {
+  const explicit = process.env.EXPO_PUBLIC_ADMIN_API_URL?.trim();
+  if (explicit) return trimSlash(explicit);
+
+  const learner = process.env.EXPO_PUBLIC_API_URL?.trim();
+  if (learner) {
+    const base = trimSlash(learner);
+    if (base.endsWith("/api/v1")) return base;
+    return `${base}/api/v1`;
+  }
+
+  const web = trimSlash(
+    process.env.EXPO_PUBLIC_WEB_ORIGIN || "https://grammario.ai"
+  );
+  return `${web}/api/v1`;
+}
+
+export const ADMIN_API_BASE = resolveAdminApiBase();
 
 export const adminApi = axios.create({
   baseURL: ADMIN_API_BASE,
   timeout: 120000,
   headers: {
     "Content-Type": "application/json",
+    Accept: "application/json",
+    // Some hosts/WAFs drop requests with no User-Agent (common with RN).
+    "User-Agent": "GrammarioMobile/1.0",
   },
 });
 
 adminApi.interceptors.request.use(async (config) => {
+  applyTrustedClientHeaders(config);
   const {
     data: { session },
     error,
@@ -34,6 +59,29 @@ adminApi.interceptors.request.use(async (config) => {
   return config;
 });
 
+function adminNetworkHelp(): string {
+  const base = ADMIN_API_BASE;
+  const isLocal =
+    /localhost|127\.0\.0\.1|^10\.|^192\.168\.|^172\.(1[6-9]|2\d|3[01])\./i.test(
+      base
+    );
+  const lines = [
+    `Admin API base URL: ${base}`,
+    "Could not reach the server (no HTTP response). Common fixes:",
+    "• Admin URL is EXPO_PUBLIC_ADMIN_API_URL, else EXPO_PUBLIC_API_URL + /api/v1, else EXPO_PUBLIC_WEB_ORIGIN + /api/v1.",
+    "• Local Next.js: set EXPO_PUBLIC_ADMIN_API_URL=http://YOUR_LAN_IP:3000/api/v1 (not localhost on a real phone).",
+    "• After changing .env: npx expo start --clear (Expo bakes EXPO_PUBLIC_* at bundle time).",
+    "• Confirm the host:port serves /api/v1/admin/* (same server as the web admin, or your BFF).",
+    "• HTTP on Android: cleartext / dev client rebuild if needed; Expo Go has its own rules.",
+  ];
+  if (isLocal) {
+    lines.push(
+      "• On a physical device, localhost points at the phone itself — use your computer’s LAN IP instead."
+    );
+  }
+  return lines.join("\n");
+}
+
 adminApi.interceptors.response.use(
   (response) => response,
   (
@@ -41,6 +89,26 @@ adminApi.interceptors.response.use(
       detail?: string | { message?: string; error?: string };
     }>
   ) => {
+    const noResponse = !error.response;
+    const code = error.code;
+    const isNetworkish =
+      noResponse &&
+      (code === "ERR_NETWORK" ||
+        code === "ECONNABORTED" ||
+        /network/i.test(String(error.message)));
+
+    if (isNetworkish) {
+      const prefix =
+        code === "ECONNABORTED"
+          ? "Request timed out or was aborted.\n\n"
+          : "";
+      throw new ApiError(prefix + adminNetworkHelp(), 0, {
+        adminApiBase: ADMIN_API_BASE,
+        axiosCode: code,
+      });
+    }
+
+    const status = error.response?.status;
     let message = "An error occurred";
     if (error.response?.data?.detail) {
       if (typeof error.response.data.detail === "string") {
@@ -54,9 +122,15 @@ adminApi.interceptors.response.use(
     } else if (error.message) {
       message = error.message;
     }
+
+    if (status === 404) {
+      const origin = resolveApiClientOrigin();
+      message = `${message}\n\n404: This host may not expose /api/v1/admin/* (e.g. only FastAPI, not Next.js), or middleware blocked the route.\nThe app sends Origin/Referer: ${origin} — allow that origin on your API gateway, or set EXPO_PUBLIC_API_CLIENT_ORIGIN to match what the web app uses.`;
+    }
+
     throw new ApiError(
       message,
-      error.response?.status || 500,
+      status || 500,
       error.response?.data as Record<string, unknown>
     );
   }

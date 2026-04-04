@@ -1,4 +1,5 @@
 import axios, { AxiosError } from "axios";
+import { applyTrustedClientHeaders } from "./api-client-origin";
 import { isInvalidStoredSessionError } from "./auth-session";
 import { supabase } from "./supabase";
 
@@ -110,6 +111,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use(async (config) => {
+  applyTrustedClientHeaders(config);
   const {
     data: { session },
     error,
