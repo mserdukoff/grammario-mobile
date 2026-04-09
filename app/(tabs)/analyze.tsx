@@ -10,8 +10,7 @@ import {
   Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Volume2, History, ArrowRight } from "lucide-react-native";
-import * as Speech from "expo-speech";
+import { History, ArrowRight } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import BottomSheet from "@gorhom/bottom-sheet";
 import { useTheme } from "@/theme";
@@ -31,11 +30,9 @@ import {
 } from "@/lib/db";
 import { PillToggle } from "@/components/ui/PillToggle";
 import { Button } from "@/components/ui/Button";
-import { DependencyGraph } from "@/components/analysis/DependencyGraph";
-import { MorphologyPanel } from "@/components/analysis/MorphologyPanel";
+import { SentenceView } from "@/components/analysis/SentenceView";
 import { AnalysisSheet } from "@/components/analysis/AnalysisSheet";
 import { HistorySheet } from "@/components/history/HistorySheet";
-import { SaveVocabularyRow } from "@/components/vocabulary/SaveVocabularyRow";
 import { useToast } from "@/components/gamification/AchievementToast";
 import { LANGUAGES } from "@/lib/utils";
 import { impact } from "@/lib/haptics";
@@ -59,7 +56,6 @@ export default function AnalyzeScreen() {
   const preferences = useAppStore((s) => s.preferences);
   const defaultLanguage = preferences.defaultLanguage;
   const enableSounds = preferences.enableSounds;
-  const enableTTS = preferences.enableTTS;
   const showTranslations = preferences.showTranslations;
 
   const [text, setText] = useState("");
@@ -92,22 +88,6 @@ export default function AnalyzeScreen() {
     if (!learn) return LANGUAGE_OPTIONS;
     return LANGUAGE_OPTIONS.filter((o) => o.value === learn);
   }, [profile?.is_pro, profile?.learn_language]);
-
-  const handleSpeak = () => {
-    if (!enableTTS) return;
-    const speakText = analysis?.metadata.text || text;
-    if (!speakText) return;
-    const localeMap: Record<string, string> = {
-      it: "it-IT",
-      es: "es-ES",
-      de: "de-DE",
-      ru: "ru-RU",
-      tr: "tr-TR",
-    };
-    Speech.speak(speakText, {
-      language: localeMap[language] || "en-US",
-    });
-  };
 
   const handleAnalyze = useCallback(async () => {
     if (!text.trim()) return;
@@ -227,8 +207,6 @@ export default function AnalyzeScreen() {
     }, 300);
   };
 
-  const selectedToken = analysis?.nodes.find((n) => n.id === selectedTokenId);
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{ flex: 1 }}>
@@ -298,27 +276,6 @@ export default function AnalyzeScreen() {
               accessibilityLabel="Sentence input"
             />
             <Pressable
-              onPress={handleSpeak}
-              hitSlop={8}
-              accessibilityLabel="Listen to pronunciation"
-              accessibilityRole="button"
-              style={{
-                padding: 8,
-                opacity: enableTTS ? 1 : 0.35,
-              }}
-              disabled={!enableTTS}
-            >
-              <Volume2 size={20} color={colors.mutedForeground} />
-            </Pressable>
-            <View
-              style={{
-                width: 1,
-                height: 24,
-                backgroundColor: colors.border,
-                marginHorizontal: 4,
-              }}
-            />
-            <Pressable
               onPress={() => setHistoryVisible(true)}
               hitSlop={8}
               accessibilityLabel="View analysis history"
@@ -355,33 +312,17 @@ export default function AnalyzeScreen() {
           contentContainerStyle={{ paddingBottom: 200 }}
         >
           {analysis && (
-            <>
-              <DependencyGraph
-                nodes={analysis.nodes}
-                grammarErrors={analysis.grammar_errors}
-                selectedTokenId={selectedTokenId}
-                onSelectToken={setSelectedTokenId}
-              />
-              {selectedToken && user && (
-                <>
-                  <SaveVocabularyRow
-                    userId={user.id}
-                    analysisId={analysisId}
-                    token={selectedToken}
-                    sentence={analysis.metadata.text}
-                    language={analysis.metadata.language}
-                    sentenceTranslation={
-                      analysis.pedagogical_data?.translation
-                    }
-                    onSaved={() => refreshProfile()}
-                  />
-                  <MorphologyPanel
-                    token={selectedToken}
-                    language={analysis.metadata.language}
-                  />
-                </>
-              )}
-            </>
+            <SentenceView
+              nodes={analysis.nodes}
+              language={analysis.metadata.language}
+              sentence={analysis.metadata.text}
+              analysisId={analysisId}
+              userId={user?.id ?? null}
+              selectedTokenId={selectedTokenId}
+              onSelectToken={setSelectedTokenId}
+              sentenceTranslation={analysis.pedagogical_data?.translation}
+              onSaved={refreshProfile}
+            />
           )}
 
           {!analysis && !loading && (

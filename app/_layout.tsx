@@ -64,6 +64,7 @@ export default function RootLayout() {
     "PlusJakartaSans-Medium": require("@/assets/fonts/PlusJakartaSans-Medium.ttf"),
     "PlusJakartaSans-SemiBold": require("@/assets/fonts/PlusJakartaSans-SemiBold.ttf"),
     "PlusJakartaSans-Bold": require("@/assets/fonts/PlusJakartaSans-Bold.ttf"),
+    InstrumentSerif: require("@/assets/fonts/InstrumentSerif-Regular.ttf"),
     "InstrumentSerif-Italic": require("@/assets/fonts/InstrumentSerif-Italic.ttf"),
     JetBrainsMono: require("@/assets/fonts/JetBrainsMono-Regular.ttf"),
   });

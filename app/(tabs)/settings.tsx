@@ -512,3 +512,4 @@ function LegalRow({
     </Pressable>
   );
 }
+

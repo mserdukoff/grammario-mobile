@@ -3,7 +3,8 @@ export const fonts = {
   bodyMedium: "PlusJakartaSans-Medium",
   bodySemiBold: "PlusJakartaSans-SemiBold",
   bodyBold: "PlusJakartaSans-Bold",
-  heading: "InstrumentSerif-Italic",
+  heading: "InstrumentSerif",
+  headingItalic: "InstrumentSerif-Italic",
   mono: "JetBrainsMono",
 } as const;
 
