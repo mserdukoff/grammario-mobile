@@ -7,58 +7,89 @@ import {
   Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Eye, X, Check, CheckCheck, RotateCcw, ChevronDown } from "lucide-react-native";
+import {
+  Eye,
+  X,
+  Check,
+  CheckCheck,
+  RotateCcw,
+  ChevronDown,
+  BookOpen,
+  GraduationCap,
+} from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/theme";
 import { useAuth } from "@/lib/auth-context";
 import {
-  getVocabularyDueForReview,
-  updateVocabularyReview,
-  getVocabularyReviewStats,
-} from "@/lib/db";
-import type { Vocabulary } from "@/lib/database.types";
+  getGrammarReviews,
+  submitGrammarReviewRating,
+  type GrammarConceptReview,
+} from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { ProgressBar } from "@/components/ui/ProgressBar";
-import { getLanguageName } from "@/lib/utils";
+import { Badge } from "@/components/ui/Badge";
 import { useAppStore } from "@/store/useAppStore";
 import { impact } from "@/lib/haptics";
-import { Badge } from "@/components/ui/Badge";
+
+function getCefrColors(level: string | null | undefined, colors: ReturnType<typeof useTheme>["colors"]) {
+  if (!level) return { bg: colors.surface2, fg: colors.mutedForeground };
+  if (level.startsWith("A")) return { bg: colors.successLight, fg: colors.success };
+  if (level.startsWith("B")) return { bg: colors.warningLight, fg: colors.warning };
+  return { bg: colors.errorLight, fg: colors.error };
+}
+
+function renderMarkdown(text: string, colors: ReturnType<typeof useTheme>["colors"]) {
+  const paragraphs = (text || "").split(/\n\n+/).filter(Boolean);
+  return paragraphs.map((para, pi) => {
+    const segments = para.split(/\*\*(.+?)\*\*/g);
+    return (
+      <Text
+        key={pi}
+        style={{
+          fontFamily: "PlusJakartaSans",
+          fontSize: 14,
+          color: colors.foreground,
+          lineHeight: 22,
+          marginBottom: pi < paragraphs.length - 1 ? 10 : 0,
+        }}
+      >
+        {segments.map((part, si) =>
+          si % 2 === 1 ? (
+            <Text key={si} style={{ fontFamily: "PlusJakartaSans-SemiBold" }}>
+              {part}
+            </Text>
+          ) : (
+            <Text key={si}>{part}</Text>
+          )
+        )}
+      </Text>
+    );
+  });
+}
 
 export default function ReviewScreen() {
   const { colors } = useTheme();
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
   const soundsEnabled = useAppStore((s) => s.preferences.enableSounds);
 
-  const [words, setWords] = useState<Vocabulary[]>([]);
+  const [items, setItems] = useState<GrammarConceptReview[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sessionComplete, setSessionComplete] = useState(false);
   const [results, setResults] = useState({ correct: 0, total: 0 });
-  const [stats, setStats] = useState({
-    total: 0,
-    due: 0,
-    mastered: 0,
-  });
+  const [stats, setStats] = useState({ total: 0, due: 0, mastered: 0 });
   const [showFineScale, setShowFineScale] = useState(false);
 
-  const langScope =
-    profile && !profile.is_pro && profile.learn_language
-      ? profile.learn_language
-      : null;
-
-  const loadWords = useCallback(async () => {
+  const loadItems = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
-      const [due, s] = await Promise.all([
-        getVocabularyDueForReview(user.id, langScope ?? undefined),
-        getVocabularyReviewStats(user.id, langScope),
-      ]);
-      setWords(due.slice(0, 20));
+      const { items: due, stats: s } = await getGrammarReviews();
+      setItems(due);
       setStats(s);
       setCurrentIndex(0);
       setRevealed(false);
@@ -70,11 +101,11 @@ export default function ReviewScreen() {
     } finally {
       setLoading(false);
     }
-  }, [user, langScope]);
+  }, [user]);
 
   useEffect(() => {
-    loadWords();
-  }, [loadWords]);
+    loadItems();
+  }, [loadItems]);
 
   const handleReveal = () => {
     impact(soundsEnabled, Haptics.ImpactFeedbackStyle.Light);
@@ -82,13 +113,13 @@ export default function ReviewScreen() {
   };
 
   const handleRate = async (quality: number) => {
-    const word = words[currentIndex];
-    if (!word) return;
+    const item = items[currentIndex];
+    if (!item) return;
 
     impact(soundsEnabled, Haptics.ImpactFeedbackStyle.Light);
 
     try {
-      await updateVocabularyReview(word.id, quality);
+      await submitGrammarReviewRating(item.id, quality);
     } catch {
       // silent
     }
@@ -100,7 +131,7 @@ export default function ReviewScreen() {
     };
     setResults(newResults);
 
-    if (currentIndex + 1 >= words.length) {
+    if (currentIndex + 1 >= items.length) {
       setSessionComplete(true);
     } else {
       setCurrentIndex((prev) => prev + 1);
@@ -109,9 +140,12 @@ export default function ReviewScreen() {
     }
   };
 
-  const currentWord = words[currentIndex];
-  const progress =
-    words.length > 0 ? ((currentIndex + 1) / words.length) * 100 : 0;
+  const currentItem = items[currentIndex];
+  const progress = items.length > 0 ? ((currentIndex + 1) / items.length) * 100 : 0;
+  const cefrColors = currentItem ? getCefrColors(currentItem.level, colors) : null;
+  const conceptTitle = currentItem?.concept_name ?? "Grammar Concept";
+  const conceptBody = currentItem?.body || currentItem?.concept_description || "";
+  const examples = currentItem?.concept_examples || [];
 
   if (loading) {
     return (
@@ -131,22 +165,22 @@ export default function ReviewScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          padding: 16,
-          gap: 20,
-        }}
+        contentContainerStyle={{ flexGrow: 1, padding: 16, gap: 20 }}
       >
-        <View style={{ gap: 8 }}>
-          <Text
-            style={{
-              fontFamily: "InstrumentSerif-Italic",
-              fontSize: 28,
-              color: colors.foreground,
-            }}
-          >
-            Vocabulary Review
-          </Text>
+        {/* Header */}
+        <View style={{ gap: 6 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <BookOpen size={24} color={colors.primary} />
+            <Text
+              style={{
+                fontFamily: "InstrumentSerif-Italic",
+                fontSize: 28,
+                color: colors.foreground,
+              }}
+            >
+              Grammar Review
+            </Text>
+          </View>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
             <Text
               style={{
@@ -155,7 +189,7 @@ export default function ReviewScreen() {
                 color: colors.mutedForeground,
               }}
             >
-              {stats.total} words
+              {stats.total} concepts
             </Text>
             <Text
               style={{
@@ -173,46 +207,20 @@ export default function ReviewScreen() {
                 color: colors.success,
               }}
             >
-              {stats.mastered} mastered (80%+)
+              {stats.mastered} mastered
             </Text>
           </View>
         </View>
 
-        {profile && !profile.is_pro && !profile.learn_language ? (
+        {/* Empty / No concepts queued */}
+        {items.length === 0 ? (
           <View
             style={{
               flex: 1,
               alignItems: "center",
               justifyContent: "center",
-              gap: 12,
-              paddingTop: 80,
-            }}
-          >
-            <Text
-              style={{
-                fontFamily: "PlusJakartaSans",
-                fontSize: 15,
-                color: colors.mutedForeground,
-                textAlign: "center",
-              }}
-            >
-              Choose a learning language to load vocabulary scoped to your free
-              plan.
-            </Text>
-            <Button
-              title="Open Settings"
-              onPress={() => router.push("/(tabs)/settings")}
-              variant="outline"
-            />
-          </View>
-        ) : words.length === 0 ? (
-          <View
-            style={{
-              flex: 1,
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 12,
-              paddingTop: 80,
+              gap: 16,
+              paddingTop: 60,
             }}
           >
             <CheckCheck size={48} color={colors.success} />
@@ -232,19 +240,29 @@ export default function ReviewScreen() {
                 fontSize: 14,
                 color: colors.mutedForeground,
                 textAlign: "center",
+                lineHeight: 20,
               }}
             >
-              No words due for review. Analyze more sentences to build your
-              vocabulary.
+              No grammar concepts due for review. Analyze sentences or browse
+              Learn topics to queue new concepts.
             </Text>
-            <Button
-              title="Analyze sentences"
-              onPress={() => router.push("/(tabs)/analyze")}
-              variant="primary"
-              style={{ marginTop: 8 }}
-            />
+            <View style={{ flexDirection: "row", gap: 12, marginTop: 8 }}>
+              <Button
+                title="Analyze"
+                onPress={() => router.push("/(tabs)/analyze")}
+                variant="primary"
+                icon={<BookOpen size={16} color={colors.primaryForeground} />}
+              />
+              <Button
+                title="Learn"
+                onPress={() => router.push("/(tabs)/learn")}
+                variant="outline"
+                icon={<GraduationCap size={16} color={colors.foreground} />}
+              />
+            </View>
           </View>
         ) : sessionComplete ? (
+          /* Session complete */
           <View
             style={{
               flex: 1,
@@ -283,34 +301,30 @@ export default function ReviewScreen() {
                 textAlign: "center",
               }}
             >
-              {results.total} words reviewed, {results.correct} correct,{" "}
+              {results.total} concepts reviewed ·{" "}
               {results.total > 0
                 ? Math.round((results.correct / results.total) * 100)
                 : 0}
-              %
+              % accuracy
             </Text>
-            <View
-              style={{
-                flexDirection: "row",
-                gap: 12,
-                marginTop: 8,
-              }}
-            >
+            <View style={{ flexDirection: "row", gap: 12, marginTop: 8 }}>
               <Button
                 title="Again"
-                onPress={loadWords}
+                onPress={loadItems}
                 variant="outline"
                 icon={<RotateCcw size={16} color={colors.foreground} />}
               />
               <Button
-                title="Analyze more"
-                onPress={() => router.push("/(tabs)/analyze")}
+                title="Go to Learn"
+                onPress={() => router.push("/(tabs)/learn")}
                 variant="primary"
+                icon={<GraduationCap size={16} color={colors.primaryForeground} />}
               />
             </View>
           </View>
-        ) : currentWord ? (
+        ) : currentItem ? (
           <>
+            {/* Progress */}
             <View style={{ gap: 4 }}>
               <ProgressBar progress={progress} />
               <Text
@@ -321,37 +335,40 @@ export default function ReviewScreen() {
                   textAlign: "right",
                 }}
               >
-                {currentIndex + 1}/{words.length}
+                {currentIndex + 1}/{items.length}
               </Text>
             </View>
 
-            <Card
-              style={{
-                alignItems: "center",
-                paddingVertical: 40,
-                paddingHorizontal: 24,
-                gap: 16,
-              }}
-            >
+            {/* Card front */}
+            <Card style={{ gap: 16 }}>
+              {/* Meta row */}
               <View
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
                   gap: 8,
                   flexWrap: "wrap",
-                  justifyContent: "center",
                 }}
               >
-                <Text
-                  style={{
-                    fontFamily: "JetBrainsMono",
-                    fontSize: 11,
-                    color: colors.mutedForeground,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {getLanguageName(currentWord.language)}
-                </Text>
+                {currentItem.level && cefrColors && (
+                  <Badge
+                    label={currentItem.level}
+                    color={cefrColors.fg}
+                    backgroundColor={cefrColors.bg}
+                  />
+                )}
+                {currentItem.language && (
+                  <Text
+                    style={{
+                      fontFamily: "JetBrainsMono",
+                      fontSize: 11,
+                      color: colors.mutedForeground,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {currentItem.language}
+                  </Text>
+                )}
                 <Text
                   style={{
                     fontFamily: "PlusJakartaSans",
@@ -359,116 +376,123 @@ export default function ReviewScreen() {
                     color: colors.mutedForeground,
                   }}
                 >
-                  · {currentWord.mastery}% mastered
+                  {currentItem.mastery}% mastered
                 </Text>
-                {currentWord.part_of_speech && (
-                  <Badge label={currentWord.part_of_speech} mono />
-                )}
               </View>
 
+              {/* Mastery progress */}
+              <View style={{ gap: 4 }}>
+                <ProgressBar
+                  progress={currentItem.mastery}
+                  fillColor={cefrColors?.fg ?? colors.primary}
+                />
+              </View>
+
+              {/* Title */}
               <Text
                 style={{
                   fontFamily: "InstrumentSerif-Italic",
-                  fontSize: 32,
+                  fontSize: 28,
                   color: colors.foreground,
                   textAlign: "center",
+                  paddingVertical: 8,
                 }}
               >
-                {currentWord.word}
+                {conceptTitle}
               </Text>
 
-              <Text
-                style={{
-                  fontFamily: "PlusJakartaSans",
-                  fontSize: 14,
-                  color: colors.mutedForeground,
-                  fontStyle: "italic",
-                }}
-              >
-                {currentWord.lemma}
-              </Text>
-
-              {currentWord.context && (
-                <View
-                  style={{
-                    backgroundColor: colors.surface2,
-                    borderRadius: 8,
-                    padding: 12,
-                    width: "100%",
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontFamily: "PlusJakartaSans-SemiBold",
-                      fontSize: 10,
-                      color: colors.mutedForeground,
-                      textTransform: "uppercase",
-                      letterSpacing: 1,
-                      marginBottom: 4,
-                    }}
-                  >
-                    Context
-                  </Text>
-                  <Text
-                    style={{
-                      fontFamily: "PlusJakartaSans",
-                      fontSize: 13,
-                      color: colors.foreground,
-                      fontStyle: "italic",
-                    }}
-                  >
-                    &ldquo;{currentWord.context}&rdquo;
-                  </Text>
-                </View>
-              )}
-
+              {/* Reveal / back side */}
               {!revealed ? (
                 <Button
-                  title="Show answer"
+                  title="Show explanation"
                   onPress={handleReveal}
                   variant="primary"
                   icon={<Eye size={18} color={colors.primaryForeground} />}
-                  style={{ width: "100%", marginTop: 8 }}
+                  style={{ marginTop: 8 }}
                 />
               ) : (
-                <View
-                  style={{
-                    width: "100%",
-                    gap: 16,
-                    marginTop: 8,
-                    alignItems: "center",
-                  }}
-                >
-                  {currentWord.translation && (
-                    <Text
+                <View style={{ gap: 16 }}>
+                  {/* Explanation body */}
+                  {conceptBody ? (
+                    <View
                       style={{
-                        fontFamily: "PlusJakartaSans-Medium",
-                        fontSize: 20,
-                        color: colors.primary,
-                        textAlign: "center",
+                        backgroundColor: colors.surface1,
+                        borderRadius: 10,
+                        padding: 14,
+                        gap: 4,
                       }}
                     >
-                      {currentWord.translation}
-                    </Text>
+                      <Text
+                        style={{
+                          fontFamily: "PlusJakartaSans-SemiBold",
+                          fontSize: 10,
+                          color: colors.mutedForeground,
+                          textTransform: "uppercase",
+                          letterSpacing: 1,
+                          marginBottom: 6,
+                        }}
+                      >
+                        Explanation
+                      </Text>
+                      {renderMarkdown(conceptBody, colors)}
+                    </View>
+                  ) : null}
+
+                  {/* Examples */}
+                  {examples.length > 0 && (
+                    <View style={{ gap: 8 }}>
+                      <Text
+                        style={{
+                          fontFamily: "PlusJakartaSans-SemiBold",
+                          fontSize: 10,
+                          color: colors.mutedForeground,
+                          textTransform: "uppercase",
+                          letterSpacing: 1,
+                        }}
+                      >
+                        Examples
+                      </Text>
+                      {examples.slice(0, 4).map((ex, i) => (
+                        <View
+                          key={i}
+                          style={{
+                            backgroundColor: colors.surface2,
+                            borderRadius: 8,
+                            paddingHorizontal: 12,
+                            paddingVertical: 10,
+                            borderLeftWidth: 2,
+                            borderLeftColor: colors.primary + "60",
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontFamily: "PlusJakartaSans",
+                              fontSize: 14,
+                              color: colors.foreground,
+                              fontStyle: "italic",
+                            }}
+                          >
+                            {ex}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
                   )}
 
+                  {/* Rating prompt */}
                   <Text
                     style={{
                       fontFamily: "PlusJakartaSans",
                       fontSize: 13,
                       color: colors.mutedForeground,
+                      textAlign: "center",
                     }}
                   >
-                    How well did you know this? (SM-2 quality)
+                    How well did you know this?
                   </Text>
 
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      gap: 10,
-                      width: "100%",
-                    }}
-                  >
+                  {/* Primary ratings */}
+                  <View style={{ flexDirection: "row", gap: 10 }}>
                     <Pressable
                       onPress={() => handleRate(1)}
                       style={{
@@ -548,11 +572,13 @@ export default function ReviewScreen() {
                     </Pressable>
                   </View>
 
+                  {/* Expandable fine-scale */}
                   <Pressable
                     onPress={() => setShowFineScale((v) => !v)}
                     style={{
                       flexDirection: "row",
                       alignItems: "center",
+                      justifyContent: "center",
                       gap: 6,
                       paddingVertical: 8,
                     }}
@@ -589,7 +615,7 @@ export default function ReviewScreen() {
                           key={q}
                           onPress={() => handleRate(q)}
                           style={{
-                            paddingHorizontal: 14,
+                            paddingHorizontal: 18,
                             paddingVertical: 10,
                             borderRadius: 8,
                             borderWidth: 1,
@@ -600,7 +626,7 @@ export default function ReviewScreen() {
                           <Text
                             style={{
                               fontFamily: "PlusJakartaSans-Medium",
-                              fontSize: 13,
+                              fontSize: 14,
                               color: colors.foreground,
                             }}
                           >

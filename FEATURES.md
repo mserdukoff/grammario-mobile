@@ -90,10 +90,6 @@ When present in the response:
 - **CEFR difficulty**: level (A1–C2), score, optional feature breakdown.
 - **Rule-based errors** list with severity and messages.
 
-### Audio
-
-- **Text-to-speech** for the input sentence via **`SpeechSynthesis`**, with BCP-47 locale per language (when **Settings → TTS** enabled).
-
 ### Persistence and side effects (after successful analyze, signed-in)
 
 - **Insert row** in `analyses` (text, language, nodes JSON, pedagogical JSON, difficulty fields; embedding storage may be handled per schema—client saves via Supabase client).
@@ -116,6 +112,15 @@ When present in the response:
 - Duplicate → **Already saved** state.
 - New save → **+5 XP** and profile refresh.
 
+### Semantic Memory ("You've seen this before") — added Apr 2026
+
+After a successful analysis is saved (and the backend returns an `embedding`):
+
+- **`getSimilarAnalyses()`** in `db.ts` calls the `match_analyses()` Supabase RPC with the new embedding, the user's ID, the same language, and a similarity threshold of **0.6**; returns up to **4** prior analyses ranked by cosine similarity.
+- If matches exist, a **"You've seen this before"** strip appears below the pedagogy panel showing cards for each similar sentence with: sentence text (truncated), **similarity %**, difficulty level badge, relative date ("today", "3d ago", etc.).
+- Clicking a similar-sentence card loads that historical analysis into the canvas (same as opening from history).
+- Non-critical: failures are silently swallowed so they never block the main analysis flow.
+
 ### Feedback on an analysis
 
 - **Rate this analysis** form: **1–5 stars**, **category** (`accuracy`, `translation`, `grammar_tips`, `difficulty`, `other`), optional **comment**; writes **`sentence_feedback`** linked to `analysis_id`.
@@ -131,21 +136,61 @@ When present in the response:
 - **Hub** (`/app/learn`): pick one of the five languages (access controlled: free users only see their `learn_language` unless Pro).
 - **Per language** (`/app/learn/[lang]`): **CEFR bands A1–C2** as navigable levels.
 - **Per level** (`/app/learn/[lang]/[level]`): list of **topics** (slugs).
-- **Topic page** (`/app/learn/[lang]/[level]/[slug]`): title, summary, **body** with simple `**bold**` rendering and paragraphs.
-- **Curriculum content**: generated **outline topics** per language/level (intro + practice ideas); not a full interactive course—copy states that deeper lessons/exercises are expected to grow.
+- **Topic page** (`/app/learn/[lang]/[level]/[slug]`): title, summary, **body** with `**bold**` Markdown rendering and paragraphs.
+- **Italian curriculum — comprehensive hand-authored content** (added Apr 2026): full A1–C2 topic bodies for Italian. Each topic includes a multi-paragraph prose explanation, conjugation tables, worked examples, and usage rules. Topics span all major grammar areas (nouns & gender, articles, *essere/avere*, regular/irregular verbs, tenses, pronouns, subjunctive, passive, register, discourse). Other languages still use generated outline stubs.
+- **"Add to Review" button on topic pages**: each Learn topic page now has a **Queue / Practice** button. Clicking it calls `POST /api/v1/grammar-reviews` with the `topic_id` and adds the concept to the user's grammar review queue. If already queued, the button shows "Already added" and links directly to Review.
 
 ---
 
-## Vocabulary review (`/app/review`)
+## Grammar Concept Review (`/app/review` — overhauled Apr 2026)
 
-**Requires sign-in.**
+The review flow was **completely rebuilt** from a vocabulary-word flashcard into a **grammar-concept flashcard** system backed by a new `grammar_concept_reviews` table.
 
-- **Fetch due cards**: `GET /api/v1/vocabulary/review` — up to **20** items with `next_review <= today`, ordered by `next_review`; stats: **total** words, **due** count, **mastered** count ( **`mastery >= 80`** ), scoped to free-tier `learn_language` when applicable.
-- **403 `language_required`**: empty state pointing to Settings / language modal.
-- **Flashcard flow**: show word, lemma, POS, mastery %, optional **context** sentence; **Show answer** reveals optional **translation** (often null if never set), then rating controls.
-- **Ratings**: primary shortcuts **Wrong (1)**, **Hard (3)**, **Good (4)**; expandable **0–5** scale (SM-2 quality).
-- **POST** `/api/v1/vocabulary/review` with `{ vocab_id, quality }` updates scheduling (server uses SM-2 helper).
-- **Session end**: counts correct (quality ≥ 3), accuracy %, **Again** (reload due), **Analyze more**.
+### New data model
+- **`grammar_concept_reviews`** table: `user_id`, `topic_id` (curriculum concept ID such as `"it-a2-pp-essere"`), `language`, SM-2 fields (`mastery`, `ease_factor`, `interval_days`, `next_review`, `last_reviewed`, `review_count`); unique on `(user_id, topic_id)`.
+- Two concept sources: **curriculum concepts** (linked by `topic_id` to the learn curriculum) and **ad-hoc concepts** from analyses (stored with inline `concept_name`, `concept_description`, `concept_examples`, `level`, optionally `analysis_id`).
+
+### API (`/api/v1/grammar-reviews`)
+- **`GET`**: returns grammar concepts due today (SM-2 `next_review <= today`) enriched with curriculum body/examples; returns `{ items, stats: { total, due, mastered } }`.
+- **`POST`**: queue a concept — accepts either `{ topic_id }` for a curriculum concept or `{ concept_name, concept_description, concept_examples, language, level?, analysis_id? }` for an ad-hoc concept from an analysis. Returns `{ already_added: true }` if already queued.
+- **`PUT`**: submit a review rating — `{ id, quality }` (0–5 SM-2 scale); advances SM-2 scheduling, updates `mastery`, `ease_factor`, `interval_days`, `next_review`.
+
+### Flashcard UI
+- Card front: concept **title**, CEFR **level badge** (colour-coded A1–C2), language flag, mastery %, progress bar (card N / total).
+- Card back (after "Show Answer"): full **explanation** body with Markdown rendering, up to 4 **example sentences**, optional rule list.
+- **Ratings**: **Wrong (1)**, **Hard (3)**, **Good (4)** primary buttons; full **0–5** scale expandable.
+- Session complete screen: correct count, accuracy %, **Again** / **Go to Learn** actions; "all caught up" empty state with prompts to analyze or open Learn.
+
+### Queue from Analyzer
+- Grammar concepts in the pedagogy panel now have a **"Queue for review"** button per concept. Clicking it calls `POST /api/v1/grammar-reviews` with the concept inline data (name, description, examples, language, analysis ID). Deduplication prevents double-adding.
+
+---
+
+## Italian Grammar Mastery Map (`/app/learn/mastery-map`)
+
+New page added Apr 2026. Requires sign-in. **Italian only.**
+
+- **Concept taxonomy** (`it-grammar-taxonomy.ts`): curated list of Italian grammar concepts mapped to CEFR levels (A1–C2), each with a unique `id`, `title`, and `slug` matching a learn-curriculum topic.
+- **Mastery scoring from analyses**: on load, fetches all of the user's Italian `analyses` rows, extracts `pedagogical_data.concepts[].name` from each, fuzzy-matches concept names against the taxonomy, and increments per-concept encounter counts. Concepts are scored as **Not yet seen** (0), **Spotted** (1), **Familiar** (2–4), or **Well-practiced** (5+).
+- **Stats bar**: concepts encountered / total, total Italian analyses, coverage %.
+- **Two views** (toggle):
+  - **List view** (default): CEFR level sections (collapsible, each with a progress bar), concept cards in a grid showing mastery status. Clicking a card opens a **detail panel** with the list of matching analyses (text, date, difficulty level) and a link to the Learn topic.
+  - **Map view**: ReactFlow canvas with concept nodes positioned in CEFR-level rows, **prerequisite edges** (smoothstep lines) connecting related concepts (e.g. *passato prossimo* → *pp vs imperfetto*). Pan/zoom controls; clicking a node shows the same detail panel on the right.
+- **Mobile support**: detail panel slides up as a bottom sheet on small screens.
+- **Empty state**: prompt to start analyzing Italian sentences.
+- **Navigation**: accessible via the Learn hub (`/app/learn`) and the app navbar.
+
+---
+
+## Vocabulary review (`/app/review` — legacy vocabulary flow)
+
+**Note:** the Review page was rebuilt in Apr 2026 to use grammar concepts (see [Grammar Concept Review](#grammar-concept-review-appreview--overhauled-apr-2026) above). The vocabulary review endpoints remain in the API for backward-compat; the current Review UI uses the grammar-concept flow.
+
+Original vocabulary review capability (still available via API):
+
+- **`GET /api/v1/vocabulary/review`**: up to **20** vocabulary items with `next_review <= today`; stats: **total** words, **due** count, **mastered** count (**`mastery >= 80`**), scoped to free-tier `learn_language`.
+- **`POST /api/v1/vocabulary/review`** with `{ vocab_id, quality }` updates SM-2 scheduling.
+- **403 `language_required`**: when free-tier user has no `learn_language` set.
 
 ---
 
@@ -158,7 +203,6 @@ When present in the response:
 - **Learning language** (free): dropdown to set/switch language subject to **30-day** cooldown rules; syncs **`defaultLanguage`** in local preferences when updated.
 - **Preferences** (Zustand + `localStorage` under **`grammario-storage`**):
   - **Daily goal target**: 3, 5, 10, 15, or 20 analyses (drives **new** `daily_goals` row when initialized on Analyze load—not a live PATCH to today’s DB row on every change).
-  - **Text-to-speech** toggle.
   - **Show translations** toggle.
 - **Sign out**.
 
@@ -191,10 +235,13 @@ When present in the response:
 | `POST /api/v1/analyze` | Authenticated quota + language gate; proxies NLP JSON to client. |
 | `GET /api/v1/usage` | Today’s analysis count, limit, reset time, `is_pro`, expiry flag. |
 | `GET /api/v1/languages` | Supported languages list. |
-| `GET/POST /api/v1/vocabulary/review` | Due words + stats; submit SM-2 quality. |
+| `GET/POST /api/v1/vocabulary/review` | Legacy vocabulary due words + stats; submit SM-2 quality. |
+| `GET /api/v1/grammar-reviews` | Grammar concepts due today (enriched with curriculum content). |
+| `POST /api/v1/grammar-reviews` | Queue a curriculum concept (`topic_id`) or ad-hoc concept from analysis for review. |
+| `PUT /api/v1/grammar-reviews` | Submit SM-2 quality rating for a grammar concept review. |
 | `PATCH /api/v1/profile/learn-language` | Set/switch free-tier `learn_language` with cooldown rules. |
 
-**Direct Supabase (with user JWT)** is also used from the web for: saving analyses, vocabulary CRUD helpers, feedback insert, daily goals, profile reads, etc. Mobile can use the same tables and RLS policies with the Supabase client.
+**Direct Supabase (with user JWT)** is also used from the web for: saving analyses, vocabulary CRUD helpers, feedback insert, daily goals, profile reads, mastery-map concept stats (`analyses` table query), etc. Mobile can use the same tables and RLS policies with the Supabase client.
 
 ---
 
@@ -215,7 +262,8 @@ Other backend routes (for ops, not learner UI): `POST /embed`, `GET /health`, ca
 ## Database capabilities relevant to product (not always exposed in UI)
 
 - **`analyses`**: stores `nodes`, `pedagogical_data`, difficulty, **`embedding`** (pgvector), `is_favorite`, `notes`.
-- **`match_analyses()`** SQL function: similarity over embeddings — **no learner-facing “similar sentences” screen** in the web app today.
+- **`match_analyses()`** SQL function: similarity search over embeddings — **now wired to the Analyzer UI** via `getSimilarAnalyses()` in `db.ts`; see the "You’ve seen this before" feature in the Analyzer section above.
+- **`grammar_concept_reviews`**: new table (Apr 2026) — see Grammar Concept Review section above.
 - **Stripe columns** on `users` (`stripe_customer_id`, subscription fields): present in schema for future billing; **no in-app checkout** wired in this repo.
 
 ---
@@ -246,9 +294,11 @@ Admin API routes under `/api/v1/admin/*` (stats, users, analyses, vocabulary, fe
 1. **Achievements**: schema + helpers only; no end-to-end unlock UX on web.
 2. **Extra XP constants** in `db.ts` unused in the hot path (first-of-day bonus, streak bonus per event, achievement XP).
 3. **`enableSounds`** in Zustand defaults exists but **no UI or callers** located in the app.
-4. **Vocabulary `translation`** column: not populated on save-from-analyze; Review often shows translation only if filled elsewhere.
-5. **Similarity search**: DB-ready, **no UI**.
+4. **Vocabulary `translation`** column: not populated on save-from-analyze; vocabulary review (legacy) often shows translation only if filled elsewhere.
+5. **Similarity search**: now wired for Italian analyzer; threshold is 0.6 — mobile should call the same `match_analyses()` RPC after saving an analysis embedding.
+6. **Grammar Concept Review — no language gate**: currently the review queue is not restricted by free-tier `learn_language`; all queued concepts are returned regardless of language. Mobile should replicate this behavior or add a language filter if desired.
+7. **Mastery Map**: currently Italian-only; the taxonomy and hand-authored curriculum are only complete for `it`. Other language tabs in Learn still use generated stubs.
 
 ---
 
-*Last reviewed against the `frontend` app routes, `frontend/src/lib/db.ts`, API route handlers under `frontend/src/app/api/v1/`, and `supabase/schema.sql`.*
+*Last reviewed against the `frontend` app routes, `frontend/src/lib/db.ts`, API route handlers under `frontend/src/app/api/v1/`, `supabase/schema.sql`, and git log since Apr 4 2026.*

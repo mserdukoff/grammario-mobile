@@ -174,4 +174,64 @@ export async function getLanguages(): Promise<{ languages: Language[] }> {
   return response.data;
 }
 
+// === GRAMMAR REVIEWS ===
+
+export interface GrammarConceptReview {
+  id: string;
+  user_id: string;
+  topic_id?: string | null;
+  concept_name?: string | null;
+  concept_description?: string | null;
+  concept_examples?: string[] | null;
+  language?: string | null;
+  level?: string | null;
+  analysis_id?: string | null;
+  mastery: number;
+  ease_factor: number;
+  interval_days: number;
+  next_review: string;
+  last_reviewed?: string | null;
+  review_count: number;
+  body?: string | null;
+}
+
+export interface GrammarReviewStats {
+  total: number;
+  due: number;
+  mastered: number;
+}
+
+export interface GrammarReviewsResponse {
+  items: GrammarConceptReview[];
+  stats: GrammarReviewStats;
+}
+
+export async function getGrammarReviews(): Promise<GrammarReviewsResponse> {
+  const response = await api.get<GrammarReviewsResponse>("/grammar-reviews");
+  return response.data;
+}
+
+export async function queueGrammarConcept(params: {
+  topic_id?: string;
+  concept_name?: string;
+  concept_description?: string;
+  concept_examples?: string[];
+  language?: string;
+  level?: string;
+  analysis_id?: string | null;
+}): Promise<{ already_added: boolean; id?: string }> {
+  const response = await api.post<{ already_added: boolean; id?: string }>(
+    "/grammar-reviews",
+    params
+  );
+  return response.data;
+}
+
+export async function submitGrammarReviewRating(
+  id: string,
+  quality: number
+): Promise<void> {
+  await api.put("/grammar-reviews", { id, quality });
+}
+
 export default api;

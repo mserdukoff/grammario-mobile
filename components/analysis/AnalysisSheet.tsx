@@ -1,5 +1,5 @@
-import React, { forwardRef, useMemo, useState } from "react";
-import { View, Text, ScrollView, Pressable } from "react-native";
+import React, { forwardRef, useMemo, useState, useCallback } from "react";
+import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-native";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import {
   BookOpen,
@@ -7,9 +7,12 @@ import {
   HelpCircle,
   ChevronRight,
   MessageSquarePlus,
+  Plus,
+  Check,
 } from "lucide-react-native";
 import { useTheme } from "@/theme";
-import type { AnalysisResponse } from "@/lib/api";
+import type { AnalysisResponse, GrammarConcept } from "@/lib/api";
+import { queueGrammarConcept } from "@/lib/api";
 import { Badge } from "@/components/ui/Badge";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { FeedbackForm } from "@/components/feedback/FeedbackForm";
@@ -36,6 +39,31 @@ export const AnalysisSheet = forwardRef<BottomSheet, AnalysisSheetProps>(
     const { colors, isDark } = useTheme();
     const snapPoints = useMemo(() => [64, "45%", "90%"], []);
     const [feedbackOpen, setFeedbackOpen] = useState(false);
+    const [queuedConcepts, setQueuedConcepts] = useState<Set<string>>(new Set());
+    const [queuingConcept, setQueuingConcept] = useState<string | null>(null);
+
+    const handleQueueConcept = useCallback(
+      async (concept: GrammarConcept) => {
+        const key = concept.name;
+        if (queuedConcepts.has(key) || queuingConcept === key) return;
+        setQueuingConcept(key);
+        try {
+          await queueGrammarConcept({
+            concept_name: concept.name,
+            concept_description: concept.description,
+            concept_examples: concept.related_words,
+            language: analysis.metadata.language,
+            analysis_id: analysisId,
+          });
+          setQueuedConcepts((prev) => new Set([...prev, key]));
+        } catch {
+          // silent
+        } finally {
+          setQueuingConcept(null);
+        }
+      },
+      [queuedConcepts, queuingConcept, analysis.metadata.language, analysisId]
+    );
 
     const pd = analysis.pedagogical_data;
     const difficulty = analysis.difficulty;
@@ -157,52 +185,109 @@ export const AnalysisSheet = forwardRef<BottomSheet, AnalysisSheetProps>(
           {pd?.concepts && pd.concepts.length > 0 && (
             <Section label="Key Concepts" colors={colors}>
               <View style={{ gap: 14 }}>
-                {pd.concepts.map((concept, i) => (
-                  <View key={i} style={{ gap: 4 }}>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
-                      <Lightbulb size={14} color={colors.primary} />
-                      <Text
-                        style={{
-                          fontFamily: "PlusJakartaSans-Medium",
-                          fontSize: 14,
-                          color: colors.foreground,
-                        }}
-                      >
-                        {concept.name}
-                      </Text>
-                    </View>
-                    <Text
-                      style={{
-                        fontFamily: "PlusJakartaSans",
-                        fontSize: 13,
-                        color: colors.mutedForeground,
-                        lineHeight: 19,
-                      }}
-                    >
-                      {concept.description}
-                    </Text>
-                    {concept.related_words.length > 0 && (
+                {pd.concepts.map((concept, i) => {
+                  const key = concept.name;
+                  const isQueued = queuedConcepts.has(key);
+                  const isQueuing = queuingConcept === key;
+                  return (
+                    <View key={i} style={{ gap: 6 }}>
                       <View
                         style={{
                           flexDirection: "row",
+                          alignItems: "flex-start",
                           gap: 6,
-                          flexWrap: "wrap",
-                          marginTop: 4,
                         }}
                       >
-                        {concept.related_words.map((w, j) => (
-                          <Badge key={j} label={w} />
-                        ))}
+                        <Lightbulb
+                          size={14}
+                          color={colors.primary}
+                          style={{ marginTop: 2 }}
+                        />
+                        <Text
+                          style={{
+                            fontFamily: "PlusJakartaSans-Medium",
+                            fontSize: 14,
+                            color: colors.foreground,
+                            flex: 1,
+                          }}
+                        >
+                          {concept.name}
+                        </Text>
+                        <Pressable
+                          onPress={() => handleQueueConcept(concept)}
+                          disabled={isQueued || isQueuing}
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 4,
+                            paddingHorizontal: 8,
+                            paddingVertical: 4,
+                            borderRadius: 6,
+                            borderWidth: 1,
+                            borderColor: isQueued
+                              ? colors.success
+                              : colors.border,
+                            backgroundColor: isQueued
+                              ? colors.successLight
+                              : colors.surface2,
+                          }}
+                          accessibilityLabel={
+                            isQueued ? "Already queued" : "Queue for review"
+                          }
+                          accessibilityRole="button"
+                        >
+                          {isQueuing ? (
+                            <ActivityIndicator
+                              size={12}
+                              color={colors.primary}
+                            />
+                          ) : isQueued ? (
+                            <Check size={12} color={colors.success} />
+                          ) : (
+                            <Plus size={12} color={colors.mutedForeground} />
+                          )}
+                          <Text
+                            style={{
+                              fontFamily: "PlusJakartaSans-Medium",
+                              fontSize: 11,
+                              color: isQueued
+                                ? colors.success
+                                : colors.mutedForeground,
+                            }}
+                          >
+                            {isQueued ? "Queued" : "Review"}
+                          </Text>
+                        </Pressable>
                       </View>
-                    )}
-                  </View>
-                ))}
+                      <Text
+                        style={{
+                          fontFamily: "PlusJakartaSans",
+                          fontSize: 13,
+                          color: colors.mutedForeground,
+                          lineHeight: 19,
+                          paddingLeft: 20,
+                        }}
+                      >
+                        {concept.description}
+                      </Text>
+                      {concept.related_words.length > 0 && (
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            gap: 6,
+                            flexWrap: "wrap",
+                            marginTop: 2,
+                            paddingLeft: 20,
+                          }}
+                        >
+                          {concept.related_words.map((w, j) => (
+                            <Badge key={j} label={w} />
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
               </View>
             </Section>
           )}

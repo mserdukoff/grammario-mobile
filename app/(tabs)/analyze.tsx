@@ -10,7 +10,7 @@ import {
   Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { History, ArrowRight } from "lucide-react-native";
+import { History, ArrowRight, Clock } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import BottomSheet from "@gorhom/bottom-sheet";
 import { useTheme } from "@/theme";
@@ -27,9 +27,12 @@ import {
   setDailyGoal,
   getAnalysisCountSinceStartOfLocalDay,
   syncAchievementsForUser,
+  getSimilarAnalyses,
+  type SimilarAnalysis,
 } from "@/lib/db";
 import { PillToggle } from "@/components/ui/PillToggle";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 import { SentenceView } from "@/components/analysis/SentenceView";
 import { AnalysisSheet } from "@/components/analysis/AnalysisSheet";
 import { HistorySheet } from "@/components/history/HistorySheet";
@@ -65,6 +68,7 @@ export default function AnalyzeScreen() {
   const [selectedTokenId, setSelectedTokenId] = useState<number | null>(null);
   const [historyVisible, setHistoryVisible] = useState(false);
   const [analysisId, setAnalysisId] = useState<string | null>(null);
+  const [similarAnalyses, setSimilarAnalyses] = useState<SimilarAnalysis[]>([]);
 
   const analysisSheetRef = useRef<BottomSheet>(null);
 
@@ -119,9 +123,16 @@ export default function AnalyzeScreen() {
       setAnalysis(result);
       setCurrentAnalysis(result);
       addRecentAnalysis(result);
+      setSimilarAnalyses([]);
 
       const savedId = await saveAnalysis(user.id, result);
       setAnalysisId(savedId);
+
+      if (result.embedding && result.embedding.length > 0) {
+        getSimilarAnalyses(user.id, result.embedding, language, savedId)
+          .then(setSimilarAnalyses)
+          .catch(() => {});
+      }
       await incrementTotalAnalyses(user.id);
 
       let xpGain = XP_REWARDS.ANALYSIS;
@@ -201,11 +212,23 @@ export default function AnalyzeScreen() {
     setLanguage(loaded.metadata.language);
     setSelectedTokenId(null);
     setAnalysisId(null);
+    setSimilarAnalyses([]);
     setHistoryVisible(false);
     setTimeout(() => {
       analysisSheetRef.current?.snapToIndex(1);
     }, 300);
   };
+
+  function relativeDate(dateStr: string): string {
+    const now = Date.now();
+    const then = new Date(dateStr).getTime();
+    const diffDays = Math.floor((now - then) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return "today";
+    if (diffDays === 1) return "1d ago";
+    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+    return `${Math.floor(diffDays / 30)}mo ago`;
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -323,6 +346,144 @@ export default function AnalyzeScreen() {
               sentenceTranslation={analysis.pedagogical_data?.translation}
               onSaved={refreshProfile}
             />
+          )}
+
+          {/* Semantic Memory strip */}
+          {similarAnalyses.length > 0 && (
+            <View
+              style={{
+                marginHorizontal: 16,
+                marginTop: 4,
+                gap: 10,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <Clock size={14} color={colors.mutedForeground} />
+                <Text
+                  style={{
+                    fontFamily: "PlusJakartaSans-SemiBold",
+                    fontSize: 11,
+                    color: colors.mutedForeground,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                  }}
+                >
+                  You've seen this before
+                </Text>
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 10 }}
+              >
+                {similarAnalyses.map((sim) => {
+                  const pct = Math.round(sim.similarity * 100);
+                  let diffBg = colors.surface2;
+                  let diffFg = colors.mutedForeground;
+                  if (sim.difficulty_level) {
+                    if (sim.difficulty_level.startsWith("A")) {
+                      diffBg = colors.successLight;
+                      diffFg = colors.success;
+                    } else if (sim.difficulty_level.startsWith("B")) {
+                      diffBg = colors.warningLight;
+                      diffFg = colors.warning;
+                    } else {
+                      diffBg = colors.errorLight;
+                      diffFg = colors.error;
+                    }
+                  }
+                  return (
+                    <Pressable
+                      key={sim.id}
+                      onPress={() => {
+                        const loaded: AnalysisResponse = {
+                          metadata: {
+                            text: sim.text,
+                            language: sim.language,
+                          },
+                          nodes:
+                            (sim.nodes as AnalysisResponse["nodes"]) ?? [],
+                          pedagogical_data: sim.pedagogical_data as
+                            | AnalysisResponse["pedagogical_data"]
+                            | undefined,
+                        };
+                        handleLoadAnalysis(loaded);
+                      }}
+                      style={{
+                        width: 200,
+                        padding: 12,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        backgroundColor: colors.card,
+                        gap: 6,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontFamily: "PlusJakartaSans",
+                          fontSize: 13,
+                          color: colors.foreground,
+                          fontStyle: "italic",
+                          lineHeight: 18,
+                        }}
+                        numberOfLines={2}
+                      >
+                        {sim.text}
+                      </Text>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <View
+                          style={{
+                            paddingHorizontal: 6,
+                            paddingVertical: 2,
+                            borderRadius: 4,
+                            backgroundColor: colors.primary + "18",
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontFamily: "PlusJakartaSans-Medium",
+                              fontSize: 10,
+                              color: colors.primary,
+                            }}
+                          >
+                            {pct}% similar
+                          </Text>
+                        </View>
+                        {sim.difficulty_level && (
+                          <Badge
+                            label={sim.difficulty_level}
+                            color={diffFg}
+                            backgroundColor={diffBg}
+                          />
+                        )}
+                        <Text
+                          style={{
+                            fontFamily: "PlusJakartaSans",
+                            fontSize: 10,
+                            color: colors.mutedForeground,
+                          }}
+                        >
+                          {relativeDate(sim.created_at)}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
           )}
 
           {!analysis && !loading && (

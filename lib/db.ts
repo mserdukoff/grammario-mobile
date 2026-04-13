@@ -564,6 +564,55 @@ export async function syncAchievementsForUser(userId: string): Promise<{
   return { newlyUnlocked, leveledUpTo };
 }
 
+export interface SimilarAnalysis {
+  id: string;
+  text: string;
+  language: string;
+  similarity: number;
+  difficulty_level?: string | null;
+  created_at: string;
+  nodes?: unknown;
+  pedagogical_data?: unknown;
+}
+
+export async function getSimilarAnalyses(
+  userId: string,
+  embedding: number[],
+  language: string,
+  excludeId?: string
+): Promise<SimilarAnalysis[]> {
+  try {
+    const { data, error } = await db.rpc("match_analyses", {
+      query_embedding: embedding,
+      match_user_id: userId,
+      match_language: language,
+      match_threshold: 0.6,
+      match_count: 4,
+    });
+
+    if (error) return [];
+
+    const results = (data || []) as SimilarAnalysis[];
+    return results.filter((r) => r.id !== excludeId);
+  } catch {
+    return [];
+  }
+}
+
+export async function getAllItalianAnalyses(
+  userId: string
+): Promise<Array<{ id: string; text: string; created_at: string; difficulty_level?: string | null; pedagogical_data?: unknown }>> {
+  const { data, error } = await db
+    .from("analyses")
+    .select("id, text, created_at, difficulty_level, pedagogical_data")
+    .eq("user_id", userId)
+    .eq("language", "it")
+    .order("created_at", { ascending: false });
+
+  if (error) return [];
+  return data || [];
+}
+
 export async function updateUserLearnLanguage(
   userId: string,
   languageCode: string
