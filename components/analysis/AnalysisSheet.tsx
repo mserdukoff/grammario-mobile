@@ -11,8 +11,7 @@ import {
   Check,
 } from "lucide-react-native";
 import { useTheme } from "@/theme";
-import type { AnalysisResponse, GrammarConcept } from "@/lib/api";
-import { queueGrammarConcept } from "@/lib/api";
+import { queueGrammarConcept, type AnalysisResponse, type GrammarConcept } from "@/lib/api";
 import { Badge } from "@/components/ui/Badge";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { FeedbackForm } from "@/components/feedback/FeedbackForm";

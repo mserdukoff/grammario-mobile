@@ -38,6 +38,7 @@ import {
   getMasteryColors,
   getMasteryLabel,
   type ItGrammarConcept,
+  type MasteryStatus,
 } from "@/lib/it-grammar-taxonomy";
 import { Badge } from "@/components/ui/Badge";
 import { ProgressBar } from "@/components/ui/ProgressBar";

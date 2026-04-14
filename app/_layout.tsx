@@ -1,5 +1,6 @@
 import "../global.css";
 import React, { useEffect } from "react";
+import { View, Text, Pressable } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -11,6 +12,55 @@ import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { ToastProvider } from "@/components/gamification/AchievementToast";
 
 SplashScreen.preventAutoHideAsync();
+
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => void }) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#FAFAF8",
+        padding: 32,
+        gap: 16,
+      }}
+    >
+      <Text
+        style={{
+          fontSize: 28,
+          color: "#1A1A1A",
+          textAlign: "center",
+        }}
+      >
+        Something went wrong
+      </Text>
+      <Text
+        style={{
+          fontSize: 14,
+          color: "#6B6B6B",
+          textAlign: "center",
+          lineHeight: 20,
+        }}
+      >
+        {error.message || "An unexpected error occurred."}
+      </Text>
+      <Pressable
+        onPress={retry}
+        style={{
+          backgroundColor: "#1A1A1A",
+          paddingHorizontal: 24,
+          paddingVertical: 12,
+          borderRadius: 10,
+          marginTop: 8,
+        }}
+      >
+        <Text style={{ color: "#FFFFFF", fontSize: 15 }}>
+          Try again
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
 
 function useProtectedRoute() {
   const { user, loading } = useAuth();

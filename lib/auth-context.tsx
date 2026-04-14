@@ -20,28 +20,6 @@ const GOOGLE_DISCOVERY = {
   tokenEndpoint: "https://oauth2.googleapis.com/token",
 };
 
-export const XP_PER_LEVEL = [
-  0, 100, 250, 500, 1000, 2000, 4000, 8000, 16000, 32000,
-];
-
-export function calculateLevel(xp: number): number {
-  for (let i = XP_PER_LEVEL.length - 1; i >= 0; i--) {
-    if (xp >= XP_PER_LEVEL[i]) return i + 1;
-  }
-  return 1;
-}
-
-export function xpForNextLevel(level: number): number {
-  return XP_PER_LEVEL[level] || XP_PER_LEVEL[XP_PER_LEVEL.length - 1] * 2;
-}
-
-export function xpProgress(xp: number, level: number): number {
-  const currentLevelXp = XP_PER_LEVEL[level - 1] || 0;
-  const nextLevelXp =
-    XP_PER_LEVEL[level] || XP_PER_LEVEL[XP_PER_LEVEL.length - 1] * 2;
-  return ((xp - currentLevelXp) / (nextLevelXp - currentLevelXp)) * 100;
-}
-
 interface AuthContextType {
   user: SupabaseUser | null;
   profile: User | null;

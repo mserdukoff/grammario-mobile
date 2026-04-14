@@ -15,9 +15,17 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.grammario.mobile",
+      "buildNumber": "1",
+      "usesNonExemptEncryption": false,
       "infoPlist": {
         "NSAppTransportSecurity": {
-          "NSAllowsLocalNetworking": true
+          "NSAllowsLocalNetworking": true,
+          "NSExceptionDomains": {
+            "159.203.170.116": {
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSIncludesSubdomains": false
+            }
+          }
         }
       }
     },

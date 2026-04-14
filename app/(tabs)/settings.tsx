@@ -183,7 +183,7 @@ export default function SettingsScreen() {
               >
                 {profile?.is_pro
                   ? "All supported languages are included."
-                  : "Upgrade paths may arrive later; usage limits still apply by plan flags in the backend."}
+                  : "Pro upgrades are not yet available during the test release. Stay tuned!"}
               </Text>
             </View>
             <View style={{ gap: 4 }}>
@@ -353,6 +353,14 @@ export default function SettingsScreen() {
               onPress={() => openLegal("/patch-notes")}
               colors={colors}
             />
+            <LegalRow
+              title="Contact support"
+              onPress={() =>
+                Linking.openURL("mailto:support@grammario.app").catch(() => {})
+              }
+              colors={colors}
+              isLast
+            />
           </Card>
         </View>
 
@@ -417,7 +425,7 @@ export default function SettingsScreen() {
               color: colors.mutedForeground,
             }}
           >
-            Grammario v1.0.0
+            Grammario v1.0.0 · Test Release
           </Text>
         </View>
       </ScrollView>
@@ -481,10 +489,12 @@ function LegalRow({
   title,
   onPress,
   colors,
+  isLast,
 }: {
   title: string;
   onPress: () => void;
   colors: ThemeColors;
+  isLast?: boolean;
 }) {
   return (
     <Pressable
@@ -494,7 +504,7 @@ function LegalRow({
         alignItems: "center",
         justifyContent: "space-between",
         paddingVertical: 14,
-        borderBottomWidth: 1,
+        borderBottomWidth: isLast ? 0 : 1,
         borderBottomColor: colors.border,
       }}
       accessibilityRole="link"
@@ -512,5 +522,6 @@ function LegalRow({
     </Pressable>
   );
 }
+
 
 
