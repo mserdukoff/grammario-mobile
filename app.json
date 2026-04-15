@@ -15,22 +15,15 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.grammario.mobile",
-      "buildNumber": "1",
       "usesNonExemptEncryption": false,
       "infoPlist": {
         "NSAppTransportSecurity": {
-          "NSAllowsLocalNetworking": true,
-          "NSExceptionDomains": {
-            "159.203.170.116": {
-              "NSExceptionAllowsInsecureHTTPLoads": true,
-              "NSIncludesSubdomains": false
-            }
-          }
-        }
+          "NSAllowsLocalNetworking": true
+        },
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#FAFAF8",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -47,6 +40,14 @@
       "expo-router",
       "expo-font",
       "expo-web-browser"
-    ]
+    ],
+    "extra": {
+      "adminUserId": "",
+      "router": {},
+      "eas": {
+        "projectId": "45d2ee38-68d4-4e34-8f7f-3741f2919ff2"
+      }
+    },
+    "owner": "mserdukoff"
   }
 }

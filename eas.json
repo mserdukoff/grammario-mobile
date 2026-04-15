@@ -8,7 +8,7 @@
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://xyvmibgtadusyhyhxbjs.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5dm1pYmd0YWR1c3loeWh4YmpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzOTg4OTQsImV4cCI6MjA4Mzk3NDg5NH0.t6SZchK-uNB5Rpk-ucQp1iSn6_3-3C3Z4AP3baEry20",
-        "EXPO_PUBLIC_API_URL": "http://159.203.170.116",
+        "EXPO_PUBLIC_API_URL": "https://api.grammario.ai",
         "EXPO_PUBLIC_WEB_ORIGIN": "https://grammario.ai",
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1092893932462-adtj5l0vnekqvpbbt2mis2tum3qf2ofd.apps.googleusercontent.com",
         "EXPO_PUBLIC_ADMIN_USER_ID": "3f5a9d50-d8fb-4e05-a7c7-52b79d1aeee5",
@@ -31,12 +31,6 @@
     }
   },
   "submit": {
-    "production": {
-      "ios": {
-        "appleId": "",
-        "ascAppId": "",
-        "appleTeamId": ""
-      }
-    }
+    "production": {}
   }
 }
