@@ -113,7 +113,7 @@ export default function AdminFeedbackScreen() {
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: colors.background }}
-      edges={["bottom"]}
+      edges={[]}
     >
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 40 }}

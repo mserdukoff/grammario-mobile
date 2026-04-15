@@ -184,8 +184,58 @@ export type AdminFeedbackResponse = {
 };
 
 export async function getAdminStats(): Promise<AdminStats> {
-  const { data } = await adminApi.get<AdminStats>("/admin/stats");
-  return data;
+  const now = new Date();
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - 7);
+
+  const [
+    { count: total_users },
+    { count: pro_users },
+    { count: active_this_week },
+    { count: total_analyses },
+    { count: analyses_today },
+    { count: analyses_this_week },
+    { count: vocabulary_total },
+    { count: vocabulary_mastered },
+    { data: recent_analyses },
+    { data: recent_signups },
+    { data: lang_rows },
+  ] = await Promise.all([
+    supabase.from("users").select("*", { count: "exact", head: true }),
+    supabase.from("users").select("*", { count: "exact", head: true }).eq("is_pro", true),
+    supabase.from("users").select("*", { count: "exact", head: true }).gte("last_active_date", weekStart.toISOString().split("T")[0]),
+    supabase.from("analyses").select("*", { count: "exact", head: true }),
+    supabase.from("analyses").select("*", { count: "exact", head: true }).gte("created_at", todayStart.toISOString()),
+    supabase.from("analyses").select("*", { count: "exact", head: true }).gte("created_at", weekStart.toISOString()),
+    supabase.from("vocabulary").select("*", { count: "exact", head: true }),
+    supabase.from("vocabulary").select("*", { count: "exact", head: true }).gte("mastery", 80),
+    supabase.from("analyses").select("id, text, language, created_at").order("created_at", { ascending: false }).limit(5),
+    supabase.from("users").select("id, email, display_name, created_at").order("created_at", { ascending: false }).limit(5),
+    supabase.from("analyses").select("language").not("language", "is", null),
+  ]);
+
+  // Tally analyses by language
+  const analyses_by_language: Record<string, number> = {};
+  for (const row of lang_rows ?? []) {
+    const lang = row.language as string;
+    analyses_by_language[lang] = (analyses_by_language[lang] ?? 0) + 1;
+  }
+
+  return {
+    total_users: total_users ?? 0,
+    pro_users: pro_users ?? 0,
+    active_this_week: active_this_week ?? 0,
+    total_analyses: total_analyses ?? 0,
+    analyses_today: analyses_today ?? 0,
+    analyses_this_week: analyses_this_week ?? 0,
+    vocabulary_total: vocabulary_total ?? 0,
+    vocabulary_mastered: vocabulary_mastered ?? 0,
+    recent_analyses: recent_analyses ?? [],
+    recent_signups: recent_signups ?? [],
+    analyses_by_language,
+  };
 }
 
 export async function getAdminUsers(params: {

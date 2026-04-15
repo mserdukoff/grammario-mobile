@@ -15,15 +15,15 @@ export function Card({ children, style }: CardProps) {
       style={[
         {
           backgroundColor: colors.card,
-          borderRadius: 10,
+          borderRadius: 20,
           borderWidth: 1,
           borderColor: colors.border,
-          padding: 16,
+          padding: 20,
           shadowColor: isDark ? "#000" : "#2A2926",
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: isDark ? 0.2 : 0.06,
-          shadowRadius: 3,
-          elevation: 2,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: isDark ? 0.25 : 0.07,
+          shadowRadius: 8,
+          elevation: 3,
         },
         style,
       ]}

@@ -9,7 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LogOut, ExternalLink, Trophy } from "lucide-react-native";
+import { LogOut, ExternalLink, Trophy, ChevronRight } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useTheme, type ThemeMode } from "@/theme";
@@ -105,80 +105,97 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 24 }}>
+    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40, gap: 28 }}>
         <Text
           style={{
             fontFamily: "InstrumentSerif-Italic",
-            fontSize: 28,
+            fontSize: 32,
             color: colors.foreground,
-            marginTop: 8,
           }}
         >
           Settings
         </Text>
 
-        <View style={{ gap: 8 }}>
+        <View style={{ gap: 10 }}>
           <Text
             style={{
               fontFamily: "PlusJakartaSans-SemiBold",
               fontSize: 11,
               color: colors.mutedForeground,
               textTransform: "uppercase",
-              letterSpacing: 1.2,
+              letterSpacing: 1.4,
             }}
           >
             Account
           </Text>
-          <Card style={{ gap: 12 }}>
-            <View>
-              <Text
+          <Card style={{ gap: 16 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+              <View
                 style={{
-                  fontFamily: "PlusJakartaSans-SemiBold",
-                  fontSize: 16,
-                  color: colors.foreground,
+                  width: 48,
+                  height: 48,
+                  borderRadius: 16,
+                  backgroundColor: colors.primary + "18",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                {profile?.display_name || "User"}
-              </Text>
-              <Text
-                style={{
-                  fontFamily: "PlusJakartaSans",
-                  fontSize: 13,
-                  color: colors.mutedForeground,
-                }}
-              >
-                {profile?.email}
-              </Text>
+                <Text style={{ fontFamily: "InstrumentSerif-Italic", fontSize: 22, color: colors.primary }}>
+                  {(profile?.display_name || "U")[0].toUpperCase()}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontFamily: "PlusJakartaSans-SemiBold",
+                    fontSize: 16,
+                    color: colors.foreground,
+                  }}
+                >
+                  {profile?.display_name || "User"}
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: "PlusJakartaSans",
+                    fontSize: 13,
+                    color: colors.mutedForeground,
+                    marginTop: 2,
+                  }}
+                >
+                  {profile?.email}
+                </Text>
+              </View>
             </View>
+
             <View
               style={{
                 backgroundColor: profile?.is_pro
-                  ? colors.primary + "20"
+                  ? colors.primary + "14"
                   : colors.surface2,
-                paddingHorizontal: 10,
-                paddingVertical: 8,
-                borderRadius: 8,
-                gap: 6,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                borderRadius: 12,
+                gap: 4,
               }}
             >
               <Text
                 style={{
-                  fontFamily: "PlusJakartaSans-Medium",
-                  fontSize: 12,
+                  fontFamily: "PlusJakartaSans-SemiBold",
+                  fontSize: 13,
                   color: profile?.is_pro
                     ? colors.primary
                     : colors.mutedForeground,
                 }}
               >
-                {profile?.is_pro ? "Pro" : "Free"} · Beta access / Active
+                {profile?.is_pro ? "Pro" : "Free"} · Beta access
               </Text>
               <Text
                 style={{
                   fontFamily: "PlusJakartaSans",
                   fontSize: 12,
                   color: colors.mutedForeground,
-                  lineHeight: 17,
+                  lineHeight: 18,
                 }}
               >
                 {profile?.is_pro
@@ -186,41 +203,66 @@ export default function SettingsScreen() {
                   : "Pro upgrades are not yet available during the test release. Stay tuned!"}
               </Text>
             </View>
-            <View style={{ gap: 4 }}>
-              <Text
-                style={{
-                  fontFamily: "PlusJakartaSans",
-                  fontSize: 12,
-                  color: colors.mutedForeground,
-                }}
-              >
-                Level {profile?.level ?? 1} · {profile?.xp ?? 0} XP · Streak{" "}
-                {profile?.streak ?? 0} · {profile?.total_analyses ?? 0} analyses
-              </Text>
+
+            <View
+              style={{
+                flexDirection: "row",
+                gap: 16,
+                paddingTop: 4,
+              }}
+            >
+              {[
+                { label: "Level", value: String(profile?.level ?? 1) },
+                { label: "XP", value: String(profile?.xp ?? 0) },
+                { label: "Streak", value: String(profile?.streak ?? 0) },
+                { label: "Analyses", value: String(profile?.total_analyses ?? 0) },
+              ].map((item) => (
+                <View key={item.label} style={{ alignItems: "center", flex: 1 }}>
+                  <Text
+                    style={{
+                      fontFamily: "PlusJakartaSans-Bold",
+                      fontSize: 16,
+                      color: colors.foreground,
+                    }}
+                  >
+                    {item.value}
+                  </Text>
+                  <Text
+                    style={{
+                      fontFamily: "PlusJakartaSans",
+                      fontSize: 11,
+                      color: colors.mutedForeground,
+                      marginTop: 2,
+                    }}
+                  >
+                    {item.label}
+                  </Text>
+                </View>
+              ))}
             </View>
           </Card>
         </View>
 
         {!profile?.is_pro && profile?.learn_language != null && (
-          <View style={{ gap: 8 }}>
+          <View style={{ gap: 10 }}>
             <Text
               style={{
                 fontFamily: "PlusJakartaSans-SemiBold",
                 fontSize: 11,
                 color: colors.mutedForeground,
                 textTransform: "uppercase",
-                letterSpacing: 1.2,
+                letterSpacing: 1.4,
               }}
             >
               Learning language
             </Text>
-            <Card style={{ gap: 8 }}>
+            <Card style={{ gap: 12 }}>
               <Text
                 style={{
                   fontFamily: "PlusJakartaSans",
                   fontSize: 13,
                   color: colors.mutedForeground,
-                  lineHeight: 18,
+                  lineHeight: 19,
                 }}
               >
                 Switching is allowed at most once every 30 days on the free tier.
@@ -234,20 +276,20 @@ export default function SettingsScreen() {
           </View>
         )}
 
-        <View style={{ gap: 8 }}>
+        <View style={{ gap: 10 }}>
           <Text
             style={{
               fontFamily: "PlusJakartaSans-SemiBold",
               fontSize: 11,
               color: colors.mutedForeground,
               textTransform: "uppercase",
-              letterSpacing: 1.2,
+              letterSpacing: 1.4,
             }}
           >
             Preferences
           </Text>
 
-          <Card style={{ gap: 20 }}>
+          <Card style={{ gap: 22 }}>
             {profile?.is_pro && (
               <View style={{ gap: 8 }}>
                 <Text
@@ -325,14 +367,72 @@ export default function SettingsScreen() {
           </Card>
         </View>
 
-        <View style={{ gap: 8 }}>
+        <View style={{ gap: 10 }}>
           <Text
             style={{
               fontFamily: "PlusJakartaSans-SemiBold",
               fontSize: 11,
               color: colors.mutedForeground,
               textTransform: "uppercase",
-              letterSpacing: 1.2,
+              letterSpacing: 1.4,
+            }}
+          >
+            Progress
+          </Text>
+          <Pressable onPress={() => router.push("/achievements")}>
+            <Card
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 14,
+              }}
+            >
+              <View
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 14,
+                  backgroundColor: colors.primary + "14",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Trophy size={22} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontFamily: "PlusJakartaSans-SemiBold",
+                    fontSize: 15,
+                    color: colors.foreground,
+                  }}
+                >
+                  Achievements
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: "PlusJakartaSans",
+                    fontSize: 13,
+                    color: colors.mutedForeground,
+                    marginTop: 2,
+                  }}
+                >
+                  View unlocked milestones
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.mutedForeground} />
+            </Card>
+          </Pressable>
+        </View>
+
+        <View style={{ gap: 10 }}>
+          <Text
+            style={{
+              fontFamily: "PlusJakartaSans-SemiBold",
+              fontSize: 11,
+              color: colors.mutedForeground,
+              textTransform: "uppercase",
+              letterSpacing: 1.4,
             }}
           >
             Legal
@@ -364,52 +464,6 @@ export default function SettingsScreen() {
           </Card>
         </View>
 
-        <View style={{ gap: 8 }}>
-          <Text
-            style={{
-              fontFamily: "PlusJakartaSans-SemiBold",
-              fontSize: 11,
-              color: colors.mutedForeground,
-              textTransform: "uppercase",
-              letterSpacing: 1.2,
-            }}
-          >
-            Progress
-          </Text>
-          <Pressable onPress={() => router.push("/achievements")}>
-            <Card
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 12,
-              }}
-            >
-              <Trophy size={22} color={colors.primary} />
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    fontFamily: "PlusJakartaSans-SemiBold",
-                    fontSize: 15,
-                    color: colors.foreground,
-                  }}
-                >
-                  Achievements
-                </Text>
-                <Text
-                  style={{
-                    fontFamily: "PlusJakartaSans",
-                    fontSize: 13,
-                    color: colors.mutedForeground,
-                  }}
-                >
-                  View unlocked milestones
-                </Text>
-              </View>
-              <ExternalLink size={18} color={colors.mutedForeground} />
-            </Card>
-          </Pressable>
-        </View>
-
         <Button
           title="Sign Out"
           onPress={signOut}
@@ -417,15 +471,24 @@ export default function SettingsScreen() {
           icon={<LogOut size={18} color="#FFFFFF" />}
         />
 
-        <View style={{ alignItems: "center", paddingVertical: 16 }}>
+        <View style={{ alignItems: "center", paddingVertical: 8, gap: 4 }}>
+          <Text
+            style={{
+              fontFamily: "InstrumentSerif-Italic",
+              fontSize: 18,
+              color: colors.mutedForeground + "80",
+            }}
+          >
+            Grammario
+          </Text>
           <Text
             style={{
               fontFamily: "PlusJakartaSans",
               fontSize: 12,
-              color: colors.mutedForeground,
+              color: colors.mutedForeground + "80",
             }}
           >
-            Grammario v1.0.0 · Test Release
+            v1.0.0 · Test Release
           </Text>
         </View>
       </ScrollView>
@@ -518,7 +581,7 @@ function LegalRow({
       >
         {title}
       </Text>
-      <ExternalLink size={18} color={colors.mutedForeground} />
+      <ExternalLink size={16} color={colors.mutedForeground} />
     </Pressable>
   );
 }

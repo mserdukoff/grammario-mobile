@@ -23,7 +23,7 @@ export default function LearnHubScreen() {
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: colors.background }}
-      edges={["bottom"]}
+      edges={[]}
     >
       <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
         <View style={{ gap: 8, marginTop: 8 }}>

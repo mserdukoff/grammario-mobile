@@ -10,7 +10,7 @@ import {
   Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { History, ArrowRight, Clock } from "lucide-react-native";
+import { History, ArrowRight, Clock, Search } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import BottomSheet from "@gorhom/bottom-sheet";
 import { useTheme } from "@/theme";
@@ -231,37 +231,54 @@ export default function AnalyzeScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{ flex: 1 }}>
         <View
           style={{
             backgroundColor: colors.card,
             borderBottomWidth: 1,
             borderBottomColor: colors.border,
-            padding: 16,
-            gap: 12,
+            paddingHorizontal: 20,
+            paddingTop: 16,
+            paddingBottom: 18,
+            gap: 14,
           }}
         >
           {languageOptions.length <= 1 ? (
-            <View style={{ gap: 4 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
               <Text
                 style={{
-                  fontFamily: "PlusJakartaSans-Medium",
-                  fontSize: 12,
+                  fontFamily: "PlusJakartaSans",
+                  fontSize: 13,
                   color: colors.mutedForeground,
                 }}
               >
-                Learning language (free tier)
+                Learning
               </Text>
-              <Text
+              <View
                 style={{
-                  fontFamily: "PlusJakartaSans-SemiBold",
-                  fontSize: 15,
-                  color: colors.foreground,
+                  backgroundColor: colors.primary + "14",
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: 8,
                 }}
               >
-                {LANGUAGES.find((l) => l.code === language)?.name ?? language}
-              </Text>
+                <Text
+                  style={{
+                    fontFamily: "PlusJakartaSans-SemiBold",
+                    fontSize: 13,
+                    color: colors.primary,
+                  }}
+                >
+                  {LANGUAGES.find((l) => l.code === language)?.name ?? language}
+                </Text>
+              </View>
             </View>
           ) : (
             <PillToggle
@@ -275,11 +292,12 @@ export default function AnalyzeScreen() {
             style={{
               flexDirection: "row",
               alignItems: "center",
-              borderWidth: 1,
+              borderWidth: 1.5,
               borderColor: colors.input,
-              borderRadius: 10,
+              borderRadius: 16,
               backgroundColor: colors.background,
-              paddingHorizontal: 12,
+              paddingHorizontal: 16,
+              minHeight: 52,
             }}
           >
             <TextInput
@@ -289,6 +307,7 @@ export default function AnalyzeScreen() {
               placeholderTextColor={colors.mutedForeground}
               returnKeyType="go"
               onSubmitEditing={handleAnalyze}
+              multiline={false}
               style={{
                 flex: 1,
                 fontFamily: "PlusJakartaSans",
@@ -300,12 +319,20 @@ export default function AnalyzeScreen() {
             />
             <Pressable
               onPress={() => setHistoryVisible(true)}
-              hitSlop={8}
+              hitSlop={12}
               accessibilityLabel="View analysis history"
               accessibilityRole="button"
-              style={{ padding: 8 }}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                backgroundColor: colors.surface2,
+                alignItems: "center",
+                justifyContent: "center",
+                marginLeft: 8,
+              }}
             >
-              <History size={20} color={colors.mutedForeground} />
+              <History size={18} color={colors.mutedForeground} />
             </Pressable>
           </View>
 
@@ -352,7 +379,7 @@ export default function AnalyzeScreen() {
           {similarAnalyses.length > 0 && (
             <View
               style={{
-                marginHorizontal: 16,
+                marginHorizontal: 20,
                 marginTop: 4,
                 gap: 10,
               }}
@@ -415,15 +442,16 @@ export default function AnalyzeScreen() {
                         };
                         handleLoadAnalysis(loaded);
                       }}
-                      style={{
-                        width: 200,
-                        padding: 12,
-                        borderRadius: 12,
+                      style={({ pressed }) => ({
+                        width: 210,
+                        padding: 14,
+                        borderRadius: 16,
                         borderWidth: 1,
                         borderColor: colors.border,
                         backgroundColor: colors.card,
-                        gap: 6,
-                      }}
+                        gap: 8,
+                        opacity: pressed ? 0.8 : 1,
+                      })}
                     >
                       <Text
                         style={{
@@ -492,16 +520,30 @@ export default function AnalyzeScreen() {
                 flex: 1,
                 alignItems: "center",
                 justifyContent: "center",
-                paddingTop: 120,
-                paddingHorizontal: 32,
+                paddingTop: 100,
+                paddingHorizontal: 40,
+                gap: 16,
               }}
             >
+              <View
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 20,
+                  backgroundColor: colors.primary + "12",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Search size={28} color={colors.primary + "80"} />
+              </View>
               <Text
                 style={{
                   fontFamily: "InstrumentSerif-Italic",
                   fontSize: 22,
                   color: colors.mutedForeground,
                   textAlign: "center",
+                  lineHeight: 30,
                 }}
               >
                 Type a sentence above to see its linguistic structure

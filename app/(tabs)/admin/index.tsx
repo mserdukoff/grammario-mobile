@@ -68,37 +68,33 @@ export default function AdminOverviewScreen() {
     ? [
         {
           label: "Total users",
-          value: pickStat(stats, "total_users", "totalUsers"),
+          value: pickStat(stats, "total_users", "totalUsers", "users_count", "user_count"),
         },
         {
           label: "Active this week",
-          value: pickStat(stats, "active_this_week", "activeThisWeek"),
+          value: pickStat(stats, "active_this_week", "activeThisWeek", "weekly_active_users", "wau"),
         },
         {
           label: "Total analyses",
-          value: pickStat(stats, "total_analyses", "totalAnalyses"),
+          value: pickStat(stats, "total_analyses", "totalAnalyses", "analyses_count", "request_count"),
         },
         {
           label: "Analyses today",
-          value: pickStat(stats, "analyses_today", "analysesToday"),
+          value: pickStat(stats, "analyses_today", "analysesToday", "today_analyses", "daily_analyses"),
         },
         {
           label: "Analyses this week",
-          value: pickStat(stats, "analyses_this_week", "analysesThisWeek"),
+          value: pickStat(stats, "analyses_this_week", "analysesThisWeek", "weekly_analyses", "week_analyses"),
         },
         {
           label: "Pro users",
-          value: pickStat(stats, "pro_users", "proUsers"),
+          value: pickStat(stats, "pro_users", "proUsers", "pro_count", "premium_users"),
         },
         {
           label: "Vocabulary total",
-          value: pickStat(stats, "vocabulary_total", "vocabularyTotal"),
+          value: pickStat(stats, "vocabulary_total", "vocabularyTotal", "vocab_count", "saved_words"),
           subtitle: (() => {
-            const m = pickStat(
-              stats,
-              "vocabulary_mastered",
-              "vocabularyMastered"
-            );
+            const m = pickStat(stats, "vocabulary_mastered", "vocabularyMastered", "vocab_mastered");
             return m > 0 ? `${m} mastered` : undefined;
           })(),
         },
@@ -108,7 +104,7 @@ export default function AdminOverviewScreen() {
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: colors.background }}
-      edges={["bottom"]}
+      edges={[]}
     >
       <ScrollView
         contentContainerStyle={{ padding: 16, gap: 16, paddingBottom: 32 }}
@@ -152,6 +148,7 @@ export default function AdminOverviewScreen() {
             </Text>
           </Card>
         ) : null}
+
 
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
           {kpis.map((k) => (

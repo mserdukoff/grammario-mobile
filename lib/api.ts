@@ -121,6 +121,8 @@ api.interceptors.request.use(async (config) => {
   }
   if (session?.access_token) {
     config.headers.Authorization = `Bearer ${session.access_token}`;
+  } else {
+    console.warn("[API] No session/access_token — request will be sent without auth");
   }
   return config;
 });

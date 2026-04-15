@@ -44,11 +44,11 @@ export function Button({
   }));
 
   const handlePressIn = () => {
-    scale.value = withTiming(0.98, { duration: 150 });
+    scale.value = withTiming(0.965, { duration: 120 });
   };
 
   const handlePressOut = () => {
-    scale.value = withTiming(1, { duration: 150 });
+    scale.value = withTiming(1, { duration: 200 });
   };
 
   const handlePress = () => {
@@ -101,12 +101,12 @@ export function Button({
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "center",
-          borderRadius: 10,
-          paddingVertical: 14,
-          paddingHorizontal: 20,
+          borderRadius: 14,
+          paddingVertical: 15,
+          paddingHorizontal: 22,
           gap: 8,
-          minHeight: 48,
-          opacity: disabled ? 0.5 : 1,
+          minHeight: 50,
+          opacity: disabled ? 0.45 : 1,
         },
         containerStyles[variant],
         animatedStyle,

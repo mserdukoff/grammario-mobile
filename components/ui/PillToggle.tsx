@@ -16,10 +16,19 @@ interface PillToggleProps {
 }
 
 export function PillToggle({ options, selected, onSelect }: PillToggleProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
 
   return (
-    <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+    <View
+      style={{
+        flexDirection: "row",
+        gap: 6,
+        flexWrap: "wrap",
+        backgroundColor: isDark ? colors.surface1 : colors.surface2,
+        borderRadius: 14,
+        padding: 4,
+      }}
+    >
       {options.map((option) => {
         const isSelected = option.value === selected;
         return (
@@ -38,9 +47,14 @@ export function PillToggle({ options, selected, onSelect }: PillToggleProps) {
               gap: 4,
               paddingHorizontal: 14,
               paddingVertical: 8,
-              borderRadius: 20,
-              backgroundColor: isSelected ? colors.primary : colors.surface2,
-              minHeight: 36,
+              borderRadius: 10,
+              backgroundColor: isSelected ? colors.primary : "transparent",
+              minHeight: 34,
+              shadowColor: isSelected ? colors.primary : "transparent",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: isSelected ? 0.3 : 0,
+              shadowRadius: 4,
+              elevation: isSelected ? 2 : 0,
             }}
           >
             {option.icon ? (
@@ -48,11 +62,11 @@ export function PillToggle({ options, selected, onSelect }: PillToggleProps) {
             ) : null}
             <Text
               style={{
-                fontFamily: "PlusJakartaSans-Medium",
+                fontFamily: "PlusJakartaSans-SemiBold",
                 fontSize: 13,
                 color: isSelected
                   ? colors.primaryForeground
-                  : colors.secondaryForeground,
+                  : colors.mutedForeground,
               }}
             >
               {option.label}

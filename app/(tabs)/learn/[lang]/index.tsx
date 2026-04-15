@@ -40,7 +40,7 @@ export default function LearnLevelsScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["bottom"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={[]}>
       <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
         <Text
           style={{

@@ -15,9 +15,9 @@ export function Badge({ label, color, backgroundColor, mono }: BadgeProps) {
   return (
     <View
       style={{
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 6,
+        paddingHorizontal: 9,
+        paddingVertical: 4,
+        borderRadius: 8,
         backgroundColor: backgroundColor || colors.surface2,
         alignSelf: "flex-start",
       }}

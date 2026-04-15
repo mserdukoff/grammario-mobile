@@ -27,16 +27,24 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
         tabBarLabelStyle: {
-          fontFamily: "PlusJakartaSans-Medium",
+          fontFamily: "PlusJakartaSans-SemiBold",
           fontSize: 10,
+          letterSpacing: 0.2,
         },
         tabBarStyle: {
           backgroundColor: colors.card,
-          borderTopColor: colors.border,
-          borderTopWidth: 1,
-          height: 56 + (Platform.OS === "ios" ? 34 : 0),
-          paddingTop: 6,
-          paddingBottom: Platform.OS === "ios" ? 34 : 8,
+          borderTopWidth: 0,
+          height: 62 + (Platform.OS === "ios" ? 34 : 0),
+          paddingTop: 8,
+          paddingBottom: Platform.OS === "ios" ? 34 : 10,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: -1 },
+          shadowOpacity: 0.06,
+          shadowRadius: 8,
+          elevation: 12,
+        },
+        tabBarIconStyle: {
+          marginBottom: 2,
         },
       }}
     >

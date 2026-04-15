@@ -22,6 +22,8 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
 
   const handleSignIn = async () => {
     if (!email || !password) {
@@ -58,16 +60,20 @@ export default function LoginScreen() {
         contentContainerStyle={{
           flexGrow: 1,
           justifyContent: "center",
-          paddingHorizontal: 24,
+          paddingHorizontal: 28,
+          paddingVertical: 40,
         }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View style={{ alignItems: "center", marginBottom: 48 }}>
+        {/* Brand */}
+        <View style={{ alignItems: "center", marginBottom: 52 }}>
           <Text
             style={{
               fontFamily: "InstrumentSerif-Italic",
-              fontSize: 40,
+              fontSize: 48,
               color: colors.foreground,
+              lineHeight: 54,
             }}
           >
             Grammario
@@ -75,7 +81,7 @@ export default function LoginScreen() {
           <Text
             style={{
               fontFamily: "PlusJakartaSans",
-              fontSize: 14,
+              fontSize: 15,
               color: colors.mutedForeground,
               marginTop: 8,
             }}
@@ -84,14 +90,15 @@ export default function LoginScreen() {
           </Text>
         </View>
 
-        <View style={{ gap: 16 }}>
-          <View>
+        <View style={{ gap: 18 }}>
+          {/* Email field */}
+          <View style={{ gap: 8 }}>
             <Text
               style={{
-                fontFamily: "PlusJakartaSans-Medium",
+                fontFamily: "PlusJakartaSans-SemiBold",
                 fontSize: 13,
                 color: colors.foreground,
-                marginBottom: 6,
+                letterSpacing: 0.1,
               }}
             >
               Email
@@ -104,27 +111,30 @@ export default function LoginScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
+              onFocus={() => setEmailFocused(true)}
+              onBlur={() => setEmailFocused(false)}
               style={{
                 fontFamily: "PlusJakartaSans",
                 fontSize: 16,
                 color: colors.foreground,
                 backgroundColor: colors.card,
-                borderWidth: 1,
-                borderColor: colors.input,
-                borderRadius: 10,
-                paddingHorizontal: 16,
-                paddingVertical: 14,
+                borderWidth: emailFocused ? 1.5 : 1,
+                borderColor: emailFocused ? colors.ring : colors.input,
+                borderRadius: 14,
+                paddingHorizontal: 18,
+                paddingVertical: 15,
               }}
             />
           </View>
 
-          <View>
+          {/* Password field */}
+          <View style={{ gap: 8 }}>
             <Text
               style={{
-                fontFamily: "PlusJakartaSans-Medium",
+                fontFamily: "PlusJakartaSans-SemiBold",
                 fontSize: 13,
                 color: colors.foreground,
-                marginBottom: 6,
+                letterSpacing: 0.1,
               }}
             >
               Password
@@ -136,16 +146,18 @@ export default function LoginScreen() {
               placeholderTextColor={colors.mutedForeground}
               secureTextEntry
               autoComplete="password"
+              onFocus={() => setPasswordFocused(true)}
+              onBlur={() => setPasswordFocused(false)}
               style={{
                 fontFamily: "PlusJakartaSans",
                 fontSize: 16,
                 color: colors.foreground,
                 backgroundColor: colors.card,
-                borderWidth: 1,
-                borderColor: colors.input,
-                borderRadius: 10,
-                paddingHorizontal: 16,
-                paddingVertical: 14,
+                borderWidth: passwordFocused ? 1.5 : 1,
+                borderColor: passwordFocused ? colors.ring : colors.input,
+                borderRadius: 14,
+                paddingHorizontal: 18,
+                paddingVertical: 15,
               }}
             />
           </View>
@@ -160,20 +172,22 @@ export default function LoginScreen() {
                 <ActivityIndicator size="small" color={colors.primaryForeground} />
               ) : undefined
             }
+            style={{ marginTop: 4 }}
           />
 
+          {/* Divider */}
           <View
             style={{
               flexDirection: "row",
               alignItems: "center",
-              gap: 12,
-              marginVertical: 4,
+              gap: 14,
+              marginVertical: 2,
             }}
           >
             <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
             <Text
               style={{
-                fontFamily: "PlusJakartaSans",
+                fontFamily: "PlusJakartaSans-Medium",
                 fontSize: 12,
                 color: colors.mutedForeground,
               }}
@@ -195,11 +209,12 @@ export default function LoginScreen() {
             }
           />
 
+          {/* Sign up link */}
           <View
             style={{
               flexDirection: "row",
               justifyContent: "center",
-              marginTop: 16,
+              marginTop: 8,
             }}
           >
             <Text

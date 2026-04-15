@@ -548,6 +548,7 @@ export default function MasteryMapScreen() {
   if (loading) {
     return (
       <SafeAreaView
+        edges={[]}
         style={{
           flex: 1,
           backgroundColor: colors.background,
@@ -561,7 +562,7 @@ export default function MasteryMapScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={["bottom"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={[]}>
       {/* Stats bar */}
       <View
         style={{

@@ -23,6 +23,9 @@ export default function SignupScreen() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [nameFocused, setNameFocused] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
 
   const handleSignUp = async () => {
     if (!email || !password || !displayName) {
@@ -54,6 +57,18 @@ export default function SignupScreen() {
     }
   };
 
+  const inputStyle = (focused: boolean) => ({
+    fontFamily: "PlusJakartaSans" as const,
+    fontSize: 16,
+    color: colors.foreground,
+    backgroundColor: colors.card,
+    borderWidth: focused ? 1.5 : 1,
+    borderColor: focused ? colors.ring : colors.input,
+    borderRadius: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 15,
+  });
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -63,16 +78,20 @@ export default function SignupScreen() {
         contentContainerStyle={{
           flexGrow: 1,
           justifyContent: "center",
-          paddingHorizontal: 24,
+          paddingHorizontal: 28,
+          paddingVertical: 40,
         }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
+        {/* Brand */}
         <View style={{ alignItems: "center", marginBottom: 48 }}>
           <Text
             style={{
               fontFamily: "InstrumentSerif-Italic",
-              fontSize: 40,
+              fontSize: 48,
               color: colors.foreground,
+              lineHeight: 54,
             }}
           >
             Grammario
@@ -80,7 +99,7 @@ export default function SignupScreen() {
           <Text
             style={{
               fontFamily: "PlusJakartaSans",
-              fontSize: 14,
+              fontSize: 15,
               color: colors.mutedForeground,
               marginTop: 8,
             }}
@@ -89,14 +108,15 @@ export default function SignupScreen() {
           </Text>
         </View>
 
-        <View style={{ gap: 16 }}>
-          <View>
+        <View style={{ gap: 18 }}>
+          {/* Display name field */}
+          <View style={{ gap: 8 }}>
             <Text
               style={{
-                fontFamily: "PlusJakartaSans-Medium",
+                fontFamily: "PlusJakartaSans-SemiBold",
                 fontSize: 13,
                 color: colors.foreground,
-                marginBottom: 6,
+                letterSpacing: 0.1,
               }}
             >
               Display Name
@@ -107,27 +127,20 @@ export default function SignupScreen() {
               placeholder="Your name"
               placeholderTextColor={colors.mutedForeground}
               autoCapitalize="words"
-              style={{
-                fontFamily: "PlusJakartaSans",
-                fontSize: 16,
-                color: colors.foreground,
-                backgroundColor: colors.card,
-                borderWidth: 1,
-                borderColor: colors.input,
-                borderRadius: 10,
-                paddingHorizontal: 16,
-                paddingVertical: 14,
-              }}
+              onFocus={() => setNameFocused(true)}
+              onBlur={() => setNameFocused(false)}
+              style={inputStyle(nameFocused)}
             />
           </View>
 
-          <View>
+          {/* Email field */}
+          <View style={{ gap: 8 }}>
             <Text
               style={{
-                fontFamily: "PlusJakartaSans-Medium",
+                fontFamily: "PlusJakartaSans-SemiBold",
                 fontSize: 13,
                 color: colors.foreground,
-                marginBottom: 6,
+                letterSpacing: 0.1,
               }}
             >
               Email
@@ -140,27 +153,20 @@ export default function SignupScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
-              style={{
-                fontFamily: "PlusJakartaSans",
-                fontSize: 16,
-                color: colors.foreground,
-                backgroundColor: colors.card,
-                borderWidth: 1,
-                borderColor: colors.input,
-                borderRadius: 10,
-                paddingHorizontal: 16,
-                paddingVertical: 14,
-              }}
+              onFocus={() => setEmailFocused(true)}
+              onBlur={() => setEmailFocused(false)}
+              style={inputStyle(emailFocused)}
             />
           </View>
 
-          <View>
+          {/* Password field */}
+          <View style={{ gap: 8 }}>
             <Text
               style={{
-                fontFamily: "PlusJakartaSans-Medium",
+                fontFamily: "PlusJakartaSans-SemiBold",
                 fontSize: 13,
                 color: colors.foreground,
-                marginBottom: 6,
+                letterSpacing: 0.1,
               }}
             >
               Password
@@ -172,17 +178,9 @@ export default function SignupScreen() {
               placeholderTextColor={colors.mutedForeground}
               secureTextEntry
               autoComplete="password-new"
-              style={{
-                fontFamily: "PlusJakartaSans",
-                fontSize: 16,
-                color: colors.foreground,
-                backgroundColor: colors.card,
-                borderWidth: 1,
-                borderColor: colors.input,
-                borderRadius: 10,
-                paddingHorizontal: 16,
-                paddingVertical: 14,
-              }}
+              onFocus={() => setPasswordFocused(true)}
+              onBlur={() => setPasswordFocused(false)}
+              style={inputStyle(passwordFocused)}
             />
           </View>
 
@@ -196,20 +194,22 @@ export default function SignupScreen() {
                 <ActivityIndicator size="small" color={colors.primaryForeground} />
               ) : undefined
             }
+            style={{ marginTop: 4 }}
           />
 
+          {/* Divider */}
           <View
             style={{
               flexDirection: "row",
               alignItems: "center",
-              gap: 12,
-              marginVertical: 4,
+              gap: 14,
+              marginVertical: 2,
             }}
           >
             <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
             <Text
               style={{
-                fontFamily: "PlusJakartaSans",
+                fontFamily: "PlusJakartaSans-Medium",
                 fontSize: 12,
                 color: colors.mutedForeground,
               }}
@@ -231,11 +231,12 @@ export default function SignupScreen() {
             }
           />
 
+          {/* Sign in link */}
           <View
             style={{
               flexDirection: "row",
               justifyContent: "center",
-              marginTop: 16,
+              marginTop: 8,
             }}
           >
             <Text

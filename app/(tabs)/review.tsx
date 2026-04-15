@@ -150,6 +150,7 @@ export default function ReviewScreen() {
   if (loading) {
     return (
       <SafeAreaView
+        edges={["top"]}
         style={{
           flex: 1,
           backgroundColor: colors.background,
@@ -163,25 +164,22 @@ export default function ReviewScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1, padding: 16, gap: 20 }}
+        contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 32, gap: 20 }}
       >
         {/* Header */}
-        <View style={{ gap: 6 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <BookOpen size={24} color={colors.primary} />
-            <Text
-              style={{
-                fontFamily: "InstrumentSerif-Italic",
-                fontSize: 28,
-                color: colors.foreground,
-              }}
-            >
-              Grammar Review
-            </Text>
-          </View>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+        <View style={{ gap: 4 }}>
+          <Text
+            style={{
+              fontFamily: "InstrumentSerif-Italic",
+              fontSize: 30,
+              color: colors.foreground,
+            }}
+          >
+            Grammar Review
+          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 2 }}>
             <Text
               style={{
                 fontFamily: "PlusJakartaSans",
@@ -191,6 +189,7 @@ export default function ReviewScreen() {
             >
               {stats.total} concepts
             </Text>
+            <View style={{ width: 3, height: 3, borderRadius: 2, backgroundColor: colors.border }} />
             <Text
               style={{
                 fontFamily: "PlusJakartaSans-Medium",
@@ -200,6 +199,7 @@ export default function ReviewScreen() {
             >
               {stats.due} due
             </Text>
+            <View style={{ width: 3, height: 3, borderRadius: 2, backgroundColor: colors.border }} />
             <Text
               style={{
                 fontFamily: "PlusJakartaSans-Medium",
@@ -223,11 +223,22 @@ export default function ReviewScreen() {
               paddingTop: 60,
             }}
           >
-            <CheckCheck size={48} color={colors.success} />
+            <View
+              style={{
+                width: 80,
+                height: 80,
+                borderRadius: 24,
+                backgroundColor: colors.successLight,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <CheckCheck size={36} color={colors.success} />
+            </View>
             <Text
               style={{
-                fontFamily: "PlusJakartaSans-SemiBold",
-                fontSize: 18,
+                fontFamily: "InstrumentSerif-Italic",
+                fontSize: 24,
                 color: colors.foreground,
                 textAlign: "center",
               }}
@@ -240,7 +251,7 @@ export default function ReviewScreen() {
                 fontSize: 14,
                 color: colors.mutedForeground,
                 textAlign: "center",
-                lineHeight: 20,
+                lineHeight: 21,
               }}
             >
               No grammar concepts due for review. Analyze sentences or browse
@@ -268,46 +279,48 @@ export default function ReviewScreen() {
               flex: 1,
               alignItems: "center",
               justifyContent: "center",
-              gap: 16,
+              gap: 20,
               paddingTop: 60,
             }}
           >
             <View
               style={{
-                width: 80,
-                height: 80,
-                borderRadius: 40,
+                width: 88,
+                height: 88,
+                borderRadius: 28,
                 backgroundColor: colors.successLight,
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <Check size={40} color={colors.success} />
+              <Check size={44} color={colors.success} />
             </View>
-            <Text
-              style={{
-                fontFamily: "InstrumentSerif-Italic",
-                fontSize: 24,
-                color: colors.foreground,
-              }}
-            >
-              Session complete
-            </Text>
-            <Text
-              style={{
-                fontFamily: "PlusJakartaSans",
-                fontSize: 14,
-                color: colors.mutedForeground,
-                textAlign: "center",
-              }}
-            >
-              {results.total} concepts reviewed ·{" "}
-              {results.total > 0
-                ? Math.round((results.correct / results.total) * 100)
-                : 0}
-              % accuracy
-            </Text>
-            <View style={{ flexDirection: "row", gap: 12, marginTop: 8 }}>
+            <View style={{ alignItems: "center", gap: 8 }}>
+              <Text
+                style={{
+                  fontFamily: "InstrumentSerif-Italic",
+                  fontSize: 28,
+                  color: colors.foreground,
+                }}
+              >
+                Session complete
+              </Text>
+              <Text
+                style={{
+                  fontFamily: "PlusJakartaSans",
+                  fontSize: 15,
+                  color: colors.mutedForeground,
+                  textAlign: "center",
+                }}
+              >
+                {results.total} concepts reviewed ·{" "}
+                {results.total > 0
+                  ? Math.round((results.correct / results.total) * 100)
+                  : 0}
+                % accuracy
+              </Text>
+            </View>
+            <View style={{ flexDirection: "row", gap: 12 }}>
               <Button
                 title="Again"
                 onPress={loadItems}
@@ -325,22 +338,22 @@ export default function ReviewScreen() {
         ) : currentItem ? (
           <>
             {/* Progress */}
-            <View style={{ gap: 4 }}>
+            <View style={{ gap: 6 }}>
               <ProgressBar progress={progress} />
               <Text
                 style={{
-                  fontFamily: "PlusJakartaSans",
-                  fontSize: 11,
+                  fontFamily: "PlusJakartaSans-Medium",
+                  fontSize: 12,
                   color: colors.mutedForeground,
                   textAlign: "right",
                 }}
               >
-                {currentIndex + 1}/{items.length}
+                {currentIndex + 1} of {items.length}
               </Text>
             </View>
 
-            {/* Card front */}
-            <Card style={{ gap: 16 }}>
+            {/* Flashcard */}
+            <Card style={{ gap: 18 }}>
               {/* Meta row */}
               <View
                 style={{
@@ -358,21 +371,30 @@ export default function ReviewScreen() {
                   />
                 )}
                 {currentItem.language && (
-                  <Text
+                  <View
                     style={{
-                      fontFamily: "JetBrainsMono",
-                      fontSize: 11,
-                      color: colors.mutedForeground,
-                      textTransform: "uppercase",
+                      backgroundColor: colors.surface2,
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                      borderRadius: 6,
                     }}
                   >
-                    {currentItem.language}
-                  </Text>
+                    <Text
+                      style={{
+                        fontFamily: "JetBrainsMono",
+                        fontSize: 11,
+                        color: colors.mutedForeground,
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {currentItem.language}
+                    </Text>
+                  </View>
                 )}
                 <Text
                   style={{
                     fontFamily: "PlusJakartaSans",
-                    fontSize: 11,
+                    fontSize: 12,
                     color: colors.mutedForeground,
                   }}
                 >
@@ -381,21 +403,20 @@ export default function ReviewScreen() {
               </View>
 
               {/* Mastery progress */}
-              <View style={{ gap: 4 }}>
-                <ProgressBar
-                  progress={currentItem.mastery}
-                  fillColor={cefrColors?.fg ?? colors.primary}
-                />
-              </View>
+              <ProgressBar
+                progress={currentItem.mastery}
+                fillColor={cefrColors?.fg ?? colors.primary}
+              />
 
               {/* Title */}
               <Text
                 style={{
                   fontFamily: "InstrumentSerif-Italic",
-                  fontSize: 28,
+                  fontSize: 32,
                   color: colors.foreground,
                   textAlign: "center",
-                  paddingVertical: 8,
+                  paddingVertical: 12,
+                  lineHeight: 40,
                 }}
               >
                 {conceptTitle}
@@ -408,17 +429,17 @@ export default function ReviewScreen() {
                   onPress={handleReveal}
                   variant="primary"
                   icon={<Eye size={18} color={colors.primaryForeground} />}
-                  style={{ marginTop: 8 }}
+                  style={{ marginTop: 4 }}
                 />
               ) : (
-                <View style={{ gap: 16 }}>
+                <View style={{ gap: 18 }}>
                   {/* Explanation body */}
                   {conceptBody ? (
                     <View
                       style={{
                         backgroundColor: colors.surface1,
-                        borderRadius: 10,
-                        padding: 14,
+                        borderRadius: 14,
+                        padding: 16,
                         gap: 4,
                       }}
                     >
@@ -428,8 +449,8 @@ export default function ReviewScreen() {
                           fontSize: 10,
                           color: colors.mutedForeground,
                           textTransform: "uppercase",
-                          letterSpacing: 1,
-                          marginBottom: 6,
+                          letterSpacing: 1.2,
+                          marginBottom: 8,
                         }}
                       >
                         Explanation
@@ -447,7 +468,7 @@ export default function ReviewScreen() {
                           fontSize: 10,
                           color: colors.mutedForeground,
                           textTransform: "uppercase",
-                          letterSpacing: 1,
+                          letterSpacing: 1.2,
                         }}
                       >
                         Examples
@@ -457,11 +478,11 @@ export default function ReviewScreen() {
                           key={i}
                           style={{
                             backgroundColor: colors.surface2,
-                            borderRadius: 8,
-                            paddingHorizontal: 12,
-                            paddingVertical: 10,
-                            borderLeftWidth: 2,
-                            borderLeftColor: colors.primary + "60",
+                            borderRadius: 12,
+                            paddingHorizontal: 14,
+                            paddingVertical: 12,
+                            borderLeftWidth: 3,
+                            borderLeftColor: colors.primary + "70",
                           }}
                         >
                           <Text
@@ -470,6 +491,7 @@ export default function ReviewScreen() {
                               fontSize: 14,
                               color: colors.foreground,
                               fontStyle: "italic",
+                              lineHeight: 21,
                             }}
                           >
                             {ex}
@@ -482,10 +504,11 @@ export default function ReviewScreen() {
                   {/* Rating prompt */}
                   <Text
                     style={{
-                      fontFamily: "PlusJakartaSans",
+                      fontFamily: "PlusJakartaSans-Medium",
                       fontSize: 13,
                       color: colors.mutedForeground,
                       textAlign: "center",
+                      marginTop: 4,
                     }}
                   >
                     How well did you know this?
@@ -495,79 +518,79 @@ export default function ReviewScreen() {
                   <View style={{ flexDirection: "row", gap: 10 }}>
                     <Pressable
                       onPress={() => handleRate(1)}
-                      style={{
+                      style={({ pressed }) => ({
                         flex: 1,
                         alignItems: "center",
-                        paddingVertical: 14,
-                        borderRadius: 10,
-                        borderWidth: 1,
-                        borderColor: colors.error,
+                        paddingVertical: 16,
+                        borderRadius: 14,
+                        backgroundColor: colors.errorLight,
                         gap: 4,
-                      }}
+                        opacity: pressed ? 0.75 : 1,
+                      })}
                       accessibilityLabel="Wrong"
                       accessibilityRole="button"
                     >
                       <X size={20} color={colors.error} />
                       <Text
                         style={{
-                          fontFamily: "PlusJakartaSans-Medium",
+                          fontFamily: "PlusJakartaSans-SemiBold",
                           fontSize: 12,
                           color: colors.error,
                         }}
                       >
-                        Wrong (1)
+                        Wrong
                       </Text>
                     </Pressable>
 
                     <Pressable
                       onPress={() => handleRate(3)}
-                      style={{
+                      style={({ pressed }) => ({
                         flex: 1,
                         alignItems: "center",
-                        paddingVertical: 14,
-                        borderRadius: 10,
-                        borderWidth: 1,
-                        borderColor: colors.warning,
+                        paddingVertical: 16,
+                        borderRadius: 14,
+                        backgroundColor: colors.warningLight,
                         gap: 4,
-                      }}
+                        opacity: pressed ? 0.75 : 1,
+                      })}
                       accessibilityLabel="Hard"
                       accessibilityRole="button"
                     >
                       <Check size={20} color={colors.warning} />
                       <Text
                         style={{
-                          fontFamily: "PlusJakartaSans-Medium",
+                          fontFamily: "PlusJakartaSans-SemiBold",
                           fontSize: 12,
                           color: colors.warning,
                         }}
                       >
-                        Hard (3)
+                        Hard
                       </Text>
                     </Pressable>
 
                     <Pressable
                       onPress={() => handleRate(4)}
-                      style={{
+                      style={({ pressed }) => ({
                         flex: 1,
                         alignItems: "center",
-                        paddingVertical: 14,
-                        borderRadius: 10,
-                        borderWidth: 1,
-                        borderColor: colors.success,
+                        paddingVertical: 16,
+                        borderRadius: 14,
+                        backgroundColor: colors.successLight,
                         gap: 4,
-                      }}
+                        opacity: pressed ? 0.75 : 1,
+                      })}
                       accessibilityLabel="Good"
                       accessibilityRole="button"
                     >
                       <Check size={20} color={colors.success} />
                       <Text
                         style={{
-                          fontFamily: "PlusJakartaSans-Medium",
+                          fontFamily: "PlusJakartaSans-SemiBold",
                           fontSize: 12,
                           color: colors.success,
                         }}
                       >
-                        Good (4)
+                        Good
                       </Text>
                     </Pressable>
                   </View>
@@ -590,7 +613,7 @@ export default function ReviewScreen() {
                         color: colors.primary,
                       }}
                     >
-                      More ratings (0–5)
+                      More options (0–5)
                     </Text>
                     <ChevronDown
                       size={16}
@@ -614,18 +637,19 @@ export default function ReviewScreen() {
                         <Pressable
                           key={q}
                           onPress={() => handleRate(q)}
-                          style={{
-                            paddingHorizontal: 18,
-                            paddingVertical: 10,
-                            borderRadius: 8,
+                          style={({ pressed }) => ({
+                            paddingHorizontal: 22,
+                            paddingVertical: 11,
+                            borderRadius: 12,
                             borderWidth: 1,
                             borderColor: colors.border,
                             backgroundColor: colors.surface2,
-                          }}
+                            opacity: pressed ? 0.7 : 1,
+                          })}
                         >
                           <Text
                             style={{
-                              fontFamily: "PlusJakartaSans-Medium",
+                              fontFamily: "PlusJakartaSans-SemiBold",
                               fontSize: 14,
                               color: colors.foreground,
                             }}

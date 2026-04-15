@@ -102,7 +102,7 @@ export default function LearnTopicDetailScreen() {
 
   if (!topic) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <SafeAreaView edges={[]} style={{ flex: 1, backgroundColor: colors.background }}>
         <Text
           style={{
             fontFamily: "PlusJakartaSans",
@@ -124,7 +124,7 @@ export default function LearnTopicDetailScreen() {
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: colors.background }}
-      edges={["bottom"]}
+      edges={[]}
     >
       <ScrollView contentContainerStyle={{ padding: 16, gap: 20 }}>
         <View style={{ gap: 8 }}>
